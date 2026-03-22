@@ -14,16 +14,254 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      profiles: {
+        Row: {
+          business_name: string
+          bvn: string | null
+          bvn_verified: boolean | null
+          created_at: string
+          first_name: string
+          id: string
+          last_name: string
+          phone: string | null
+          updated_at: string
+          user_id: string
+          virtual_account_bank: string | null
+          virtual_account_number: string | null
+          virtual_account_ref: string | null
+          wallet_balance: number | null
+        }
+        Insert: {
+          business_name: string
+          bvn?: string | null
+          bvn_verified?: boolean | null
+          created_at?: string
+          first_name: string
+          id?: string
+          last_name: string
+          phone?: string | null
+          updated_at?: string
+          user_id: string
+          virtual_account_bank?: string | null
+          virtual_account_number?: string | null
+          virtual_account_ref?: string | null
+          wallet_balance?: number | null
+        }
+        Update: {
+          business_name?: string
+          bvn?: string | null
+          bvn_verified?: boolean | null
+          created_at?: string
+          first_name?: string
+          id?: string
+          last_name?: string
+          phone?: string | null
+          updated_at?: string
+          user_id?: string
+          virtual_account_bank?: string | null
+          virtual_account_number?: string | null
+          virtual_account_ref?: string | null
+          wallet_balance?: number | null
+        }
+        Relationships: []
+      }
+      scheduled_payments: {
+        Row: {
+          account_number: string
+          amount: number
+          bank_name: string
+          created_at: string
+          failure_reason: string | null
+          fee: number
+          flutterwave_ref: string | null
+          id: string
+          recipient_name: string
+          scheduled_date: string
+          staff_id: string | null
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          account_number: string
+          amount: number
+          bank_name: string
+          created_at?: string
+          failure_reason?: string | null
+          fee?: number
+          flutterwave_ref?: string | null
+          id?: string
+          recipient_name: string
+          scheduled_date: string
+          staff_id?: string | null
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          account_number?: string
+          amount?: number
+          bank_name?: string
+          created_at?: string
+          failure_reason?: string | null
+          fee?: number
+          flutterwave_ref?: string | null
+          id?: string
+          recipient_name?: string
+          scheduled_date?: string
+          staff_id?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scheduled_payments_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      staff: {
+        Row: {
+          account_number: string
+          bank_name: string
+          created_at: string
+          full_name: string
+          id: string
+          is_active: boolean | null
+          pay_day: number
+          salary: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          account_number: string
+          bank_name: string
+          created_at?: string
+          full_name: string
+          id?: string
+          is_active?: boolean | null
+          pay_day?: number
+          salary?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          account_number?: string
+          bank_name?: string
+          created_at?: string
+          full_name?: string
+          id?: string
+          is_active?: boolean | null
+          pay_day?: number
+          salary?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      tokenized_cards: {
+        Row: {
+          brand: string
+          created_at: string
+          expiry: string
+          flutterwave_token: string | null
+          id: string
+          is_default: boolean | null
+          last4: string
+          user_id: string
+        }
+        Insert: {
+          brand: string
+          created_at?: string
+          expiry: string
+          flutterwave_token?: string | null
+          id?: string
+          is_default?: boolean | null
+          last4: string
+          user_id: string
+        }
+        Update: {
+          brand?: string
+          created_at?: string
+          expiry?: string
+          flutterwave_token?: string | null
+          id?: string
+          is_default?: boolean | null
+          last4?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      transactions: {
+        Row: {
+          amount: number
+          balance_after: number | null
+          created_at: string
+          description: string | null
+          id: string
+          reference: string | null
+          type: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          balance_after?: number | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          reference?: string | null
+          type: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          balance_after?: number | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          reference?: string | null
+          type?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_roles: {
+        Row: {
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "admin" | "user"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +388,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["admin", "user"],
+    },
   },
 } as const
