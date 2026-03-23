@@ -1,52 +1,130 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import DashboardLayout from '@/components/DashboardLayout';
-import { CreditCard, Plus, Calendar, Clock, CheckCircle, AlertCircle, Send } from 'lucide-react';
+import { useAuth } from '@/hooks/useAuth';
+import { supabase } from '@/integrations/supabase/client';
+import { flutterwaveApi } from '@/lib/flutterwave';
+import { CreditCard, Plus, Calendar, AlertCircle, Send, Loader2, CheckCircle, XCircle, Clock } from 'lucide-react';
 import { formatNaira, calculateFee } from '@/lib/constants';
 import { toast } from 'sonner';
 
 interface Payment {
   id: string;
-  recipientName: string;
-  bankName: string;
-  accountNumber: string;
+  recipient_name: string;
+  bank_name: string;
+  account_number: string;
   amount: number;
   fee: number;
-  scheduledDate: string;
-  status: 'pending' | 'completed' | 'failed';
+  scheduled_date: string;
+  status: string;
+  failure_reason: string | null;
+}
+
+interface Bank {
+  code: string;
+  name: string;
 }
 
 const Payments = () => {
+  const { user } = useAuth();
   const [payments, setPayments] = useState<Payment[]>([]);
+  const [banks, setBanks] = useState<Bank[]>([]);
   const [showScheduleModal, setShowScheduleModal] = useState(false);
-  const [form, setForm] = useState({
-    recipientName: '',
-    bankName: '',
-    accountNumber: '',
-    amount: '',
-    scheduledDate: '',
-  });
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [processing, setProcessing] = useState<string | null>(null);
+  const [form, setForm] = useState({ recipientName: '', bankCode: '', accountNumber: '', amount: '', scheduledDate: '' });
 
-  const handleSchedule = (e: React.FormEvent) => {
-    e.preventDefault();
-    const amount = parseFloat(form.amount);
-    const fee = calculateFee(amount);
-    const payment: Payment = {
-      id: crypto.randomUUID(),
-      recipientName: form.recipientName,
-      bankName: form.bankName,
-      accountNumber: form.accountNumber,
-      amount,
-      fee,
-      scheduledDate: form.scheduledDate,
-      status: 'pending',
-    };
-    setPayments(prev => [payment, ...prev]);
-    setForm({ recipientName: '', bankName: '', accountNumber: '', amount: '', scheduledDate: '' });
-    setShowScheduleModal(false);
-    toast.success(`Payment of ${formatNaira(amount)} scheduled for ${form.scheduledDate}`);
+  useEffect(() => {
+    if (user) {
+      loadPayments();
+      loadBanks();
+    }
+  }, [user]);
+
+  const loadPayments = async () => {
+    setLoading(true);
+    const { data } = await supabase
+      .from('scheduled_payments')
+      .select('*')
+      .eq('user_id', user!.id)
+      .order('created_at', { ascending: false });
+    if (data) setPayments(data as Payment[]);
+    setLoading(false);
   };
 
-  const statusStyles = {
+  const loadBanks = async () => {
+    try {
+      const result = await flutterwaveApi.getBanks();
+      if (result.success && result.banks) setBanks(result.banks);
+    } catch (err) {
+      console.error('Failed to load banks:', err);
+    }
+  };
+
+  const handleSchedule = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSaving(true);
+
+    const amount = parseFloat(form.amount);
+    const fee = calculateFee(amount);
+    const selectedBank = banks.find(b => b.code === form.bankCode);
+
+    const { error } = await supabase.from('scheduled_payments').insert({
+      user_id: user!.id,
+      recipient_name: form.recipientName,
+      bank_name: selectedBank?.name || form.bankCode,
+      account_number: form.accountNumber,
+      amount,
+      fee,
+      scheduled_date: form.scheduledDate,
+      status: 'pending',
+    });
+
+    setSaving(false);
+    if (error) {
+      toast.error(error.message);
+    } else {
+      toast.success(`Payment of ${formatNaira(amount)} scheduled`);
+      setForm({ recipientName: '', bankCode: '', accountNumber: '', amount: '', scheduledDate: '' });
+      setShowScheduleModal(false);
+      loadPayments();
+    }
+  };
+
+  const processPayment = async (payment: Payment) => {
+    setProcessing(payment.id);
+    const bankObj = banks.find(b => b.name === payment.bank_name);
+
+    try {
+      const result = await flutterwaveApi.initiateTransfer({
+        account_bank: bankObj?.code || payment.bank_name,
+        account_number: payment.account_number,
+        amount: payment.amount,
+        recipient_name: payment.recipient_name,
+        payment_id: payment.id,
+      });
+
+      if (result.success) {
+        toast.success('Payment processed successfully!');
+        loadPayments();
+      } else {
+        toast.error(result.message || 'Transfer failed');
+      }
+    } catch (err: any) {
+      toast.error(err.message);
+    }
+    setProcessing(null);
+  };
+
+  const statusIcon = (status: string) => {
+    switch (status) {
+      case 'completed': return <CheckCircle className="w-4 h-4 text-[hsl(var(--success))]" />;
+      case 'failed': return <XCircle className="w-4 h-4 text-destructive" />;
+      default: return <Clock className="w-4 h-4 text-[hsl(var(--warning))]" />;
+    }
+  };
+
+  const statusStyles: Record<string, string> = {
     pending: 'badge-warning',
     completed: 'badge-success',
     failed: 'bg-destructive/10 text-destructive text-xs font-medium px-2.5 py-1 rounded-full',
@@ -66,44 +144,62 @@ const Payments = () => {
           </button>
         </div>
 
-        {/* Info banner */}
         <div className="bg-primary/5 border border-primary/20 rounded-xl p-4 flex items-start gap-3 section-reveal stagger-1">
           <AlertCircle className="w-5 h-5 text-primary mt-0.5 shrink-0" />
           <div className="text-sm">
             <p className="font-medium text-foreground">How payments work</p>
             <p className="text-muted-foreground mt-1">
-              Scheduled payments are deducted from your wallet balance. If insufficient, your tokenized card is charged automatically. A fee of 0.3% (max ₦1,000) applies per transfer.
+              Scheduled payments are deducted from your wallet balance. A fee of 0.3% (max ₦1,000) applies per transfer. Click "Process" on any pending payment to execute it via Flutterwave.
             </p>
           </div>
         </div>
 
-        {/* Payments list */}
         <div className="card-elevated overflow-hidden section-reveal stagger-2">
-          {payments.length > 0 ? (
+          {loading ? (
+            <div className="p-12 text-center"><Loader2 className="w-8 h-8 animate-spin mx-auto text-primary" /></div>
+          ) : payments.length > 0 ? (
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>
                   <tr className="border-b bg-muted/50">
                     <th className="text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider p-4">Recipient</th>
-                    <th className="text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider p-4">Bank</th>
+                    <th className="text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider p-4 hidden sm:table-cell">Bank</th>
                     <th className="text-right text-xs font-semibold text-muted-foreground uppercase tracking-wider p-4">Amount</th>
-                    <th className="text-right text-xs font-semibold text-muted-foreground uppercase tracking-wider p-4">Fee</th>
-                    <th className="text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider p-4">Date</th>
+                    <th className="text-right text-xs font-semibold text-muted-foreground uppercase tracking-wider p-4 hidden sm:table-cell">Fee</th>
+                    <th className="text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider p-4 hidden md:table-cell">Date</th>
                     <th className="text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider p-4">Status</th>
+                    <th className="text-right text-xs font-semibold text-muted-foreground uppercase tracking-wider p-4">Action</th>
                   </tr>
                 </thead>
                 <tbody>
                   {payments.map(p => (
                     <tr key={p.id} className="border-b last:border-0 hover:bg-muted/30 transition-colors">
                       <td className="p-4">
-                        <p className="font-medium">{p.recipientName}</p>
-                        <p className="text-xs text-muted-foreground font-mono">{p.accountNumber}</p>
+                        <p className="font-medium">{p.recipient_name}</p>
+                        <p className="text-xs text-muted-foreground font-mono">{p.account_number}</p>
                       </td>
-                      <td className="p-4 text-muted-foreground">{p.bankName}</td>
+                      <td className="p-4 text-muted-foreground hidden sm:table-cell">{p.bank_name}</td>
                       <td className="p-4 text-right font-medium tabular-nums">{formatNaira(p.amount)}</td>
-                      <td className="p-4 text-right text-sm text-muted-foreground tabular-nums">{formatNaira(p.fee)}</td>
-                      <td className="p-4 text-sm">{p.scheduledDate}</td>
-                      <td className="p-4"><span className={statusStyles[p.status]}>{p.status}</span></td>
+                      <td className="p-4 text-right text-sm text-muted-foreground tabular-nums hidden sm:table-cell">{formatNaira(p.fee)}</td>
+                      <td className="p-4 text-sm hidden md:table-cell">{p.scheduled_date}</td>
+                      <td className="p-4">
+                        <span className={`inline-flex items-center gap-1.5 ${statusStyles[p.status] || statusStyles.pending}`}>
+                          {statusIcon(p.status)} {p.status}
+                        </span>
+                        {p.failure_reason && <p className="text-xs text-destructive mt-1">{p.failure_reason}</p>}
+                      </td>
+                      <td className="p-4 text-right">
+                        {p.status === 'pending' && (
+                          <button
+                            onClick={() => processPayment(p)}
+                            disabled={processing === p.id}
+                            className="btn-primary px-3 py-1.5 rounded-md text-xs font-medium inline-flex items-center gap-1.5"
+                          >
+                            {processing === p.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <Send className="w-3 h-3" />}
+                            Process
+                          </button>
+                        )}
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -118,7 +214,6 @@ const Payments = () => {
           )}
         </div>
 
-        {/* Schedule Modal */}
         {showScheduleModal && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-foreground/40" onClick={() => setShowScheduleModal(false)}>
             <div className="bg-card rounded-2xl shadow-xl w-full max-w-md p-6 section-reveal" onClick={e => e.stopPropagation()}>
@@ -129,8 +224,15 @@ const Payments = () => {
                   <input value={form.recipientName} onChange={e => setForm(p => ({ ...p, recipientName: e.target.value }))} required className="input-field w-full" placeholder="Fatima Bello" />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium mb-1.5">Bank Name</label>
-                  <input value={form.bankName} onChange={e => setForm(p => ({ ...p, bankName: e.target.value }))} required className="input-field w-full" placeholder="GTBank" />
+                  <label className="block text-sm font-medium mb-1.5">Bank</label>
+                  {banks.length > 0 ? (
+                    <select value={form.bankCode} onChange={e => setForm(p => ({ ...p, bankCode: e.target.value }))} required className="input-field w-full">
+                      <option value="">Select bank</option>
+                      {banks.map(b => <option key={b.code} value={b.code}>{b.name}</option>)}
+                    </select>
+                  ) : (
+                    <input value={form.bankCode} onChange={e => setForm(p => ({ ...p, bankCode: e.target.value }))} required className="input-field w-full" placeholder="GTBank" />
+                  )}
                 </div>
                 <div>
                   <label className="block text-sm font-medium mb-1.5">Account Number</label>
@@ -151,8 +253,8 @@ const Payments = () => {
                 </div>
                 <div className="flex gap-3 pt-2">
                   <button type="button" onClick={() => setShowScheduleModal(false)} className="flex-1 py-2.5 rounded-lg border text-sm font-medium hover:bg-muted transition-colors">Cancel</button>
-                  <button type="submit" className="flex-1 btn-primary py-2.5 rounded-lg text-sm font-medium flex items-center justify-center gap-2">
-                    <Send className="w-4 h-4" /> Schedule
+                  <button type="submit" disabled={saving} className="flex-1 btn-primary py-2.5 rounded-lg text-sm font-medium flex items-center justify-center gap-2">
+                    {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Send className="w-4 h-4" /> Schedule</>}
                   </button>
                 </div>
               </form>
