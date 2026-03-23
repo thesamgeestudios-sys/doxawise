@@ -1,84 +1,139 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import DashboardLayout from '@/components/DashboardLayout';
-import { Users, Plus, Upload, Search, MoreHorizontal, Trash2, Edit2 } from 'lucide-react';
+import { useAuth } from '@/hooks/useAuth';
+import { supabase } from '@/integrations/supabase/client';
+import { flutterwaveApi } from '@/lib/flutterwave';
+import { Users, Plus, Upload, Search, Trash2, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { formatNaira } from '@/lib/constants';
 
 interface StaffMember {
   id: string;
-  name: string;
-  bankName: string;
-  accountNumber: string;
+  full_name: string;
+  bank_name: string;
+  account_number: string;
   salary: number;
-  payDay: number;
+  pay_day: number;
+  is_active: boolean;
+}
+
+interface Bank {
+  code: string;
+  name: string;
 }
 
 const Staff = () => {
+  const { user } = useAuth();
   const [staff, setStaff] = useState<StaffMember[]>([]);
+  const [banks, setBanks] = useState<Bank[]>([]);
   const [showAddModal, setShowAddModal] = useState(false);
   const [search, setSearch] = useState('');
-  const [newStaff, setNewStaff] = useState({ name: '', bankName: '', accountNumber: '', salary: '', payDay: '25' });
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [newStaff, setNewStaff] = useState({ full_name: '', bank_code: '', bank_name: '', account_number: '', salary: '', pay_day: '25' });
 
-  const handleAddStaff = (e: React.FormEvent) => {
-    e.preventDefault();
-    const member: StaffMember = {
-      id: crypto.randomUUID(),
-      name: newStaff.name,
-      bankName: newStaff.bankName,
-      accountNumber: newStaff.accountNumber,
-      salary: parseFloat(newStaff.salary),
-      payDay: parseInt(newStaff.payDay),
-    };
-    setStaff(prev => [...prev, member]);
-    setNewStaff({ name: '', bankName: '', accountNumber: '', salary: '', payDay: '25' });
-    setShowAddModal(false);
-    toast.success(`${member.name} added successfully`);
+  useEffect(() => {
+    if (user) {
+      loadStaff();
+      loadBanks();
+    }
+  }, [user]);
+
+  const loadStaff = async () => {
+    setLoading(true);
+    const { data } = await supabase.from('staff').select('*').eq('user_id', user!.id).order('created_at', { ascending: false });
+    if (data) setStaff(data as StaffMember[]);
+    setLoading(false);
   };
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const loadBanks = async () => {
+    try {
+      const result = await flutterwaveApi.getBanks();
+      if (result.success && result.banks) setBanks(result.banks);
+    } catch (err) {
+      console.error('Failed to load banks:', err);
+    }
+  };
+
+  const handleAddStaff = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSaving(true);
+
+    const selectedBank = banks.find(b => b.code === newStaff.bank_code);
+
+    const { error } = await supabase.from('staff').insert({
+      user_id: user!.id,
+      full_name: newStaff.full_name,
+      bank_name: selectedBank?.name || newStaff.bank_name || newStaff.bank_code,
+      account_number: newStaff.account_number,
+      salary: parseFloat(newStaff.salary) || 0,
+      pay_day: parseInt(newStaff.pay_day) || 25,
+    });
+
+    setSaving(false);
+    if (error) {
+      toast.error(error.message);
+    } else {
+      toast.success(`${newStaff.full_name} added successfully`);
+      setNewStaff({ full_name: '', bank_code: '', bank_name: '', account_number: '', salary: '', pay_day: '25' });
+      setShowAddModal(false);
+      loadStaff();
+    }
+  };
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
     const reader = new FileReader();
-    reader.onload = (event) => {
+    reader.onload = async (event) => {
       const text = event.target?.result as string;
       const lines = text.split('\n').filter(line => line.trim());
-      const newMembers: StaffMember[] = [];
+      const newMembers: any[] = [];
 
-      // Skip header row
       for (let i = 1; i < lines.length; i++) {
         const parts = lines[i].split(',').map(p => p.trim());
         if (parts.length >= 4) {
           newMembers.push({
-            id: crypto.randomUUID(),
-            name: parts[0],
-            bankName: parts[1],
-            accountNumber: parts[2],
+            user_id: user!.id,
+            full_name: parts[0],
+            bank_name: parts[1],
+            account_number: parts[2],
             salary: parseFloat(parts[3]) || 0,
-            payDay: parseInt(parts[4]) || 25,
+            pay_day: parseInt(parts[4]) || 25,
           });
         }
       }
 
       if (newMembers.length > 0) {
-        setStaff(prev => [...prev, ...newMembers]);
-        toast.success(`${newMembers.length} staff members imported`);
+        const { error } = await supabase.from('staff').insert(newMembers);
+        if (error) {
+          toast.error(error.message);
+        } else {
+          toast.success(`${newMembers.length} staff members imported`);
+          loadStaff();
+        }
       } else {
-        toast.error('No valid records found in file. Expected: Name, Bank, Account Number, Salary, Pay Day');
+        toast.error('No valid records found. Expected: Name, Bank, Account Number, Salary, Pay Day');
       }
     };
     reader.readAsText(file);
     e.target.value = '';
   };
 
-  const removeStaff = (id: string) => {
-    setStaff(prev => prev.filter(s => s.id !== id));
-    toast.success('Staff member removed');
+  const removeStaff = async (id: string) => {
+    const { error } = await supabase.from('staff').delete().eq('id', id);
+    if (error) {
+      toast.error(error.message);
+    } else {
+      toast.success('Staff member removed');
+      setStaff(prev => prev.filter(s => s.id !== id));
+    }
   };
 
   const filtered = staff.filter(s =>
-    s.name.toLowerCase().includes(search.toLowerCase()) ||
-    s.accountNumber.includes(search)
+    s.full_name.toLowerCase().includes(search.toLowerCase()) ||
+    s.account_number.includes(search)
   );
 
   return (
@@ -90,10 +145,10 @@ const Staff = () => {
             <p className="text-muted-foreground">Manage your employees and their payment details</p>
           </div>
           <div className="flex gap-3">
-            <label className="btn-primary flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium cursor-pointer bg-secondary text-secondary-foreground hover:bg-secondary/80">
+            <label className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium cursor-pointer bg-secondary text-secondary-foreground hover:bg-secondary/80 transition-colors">
               <Upload className="w-4 h-4" />
               Import CSV
-              <input type="file" accept=".csv,.txt,.doc,.pdf" onChange={handleFileUpload} className="hidden" />
+              <input type="file" accept=".csv,.txt" onChange={handleFileUpload} className="hidden" />
             </label>
             <button onClick={() => setShowAddModal(true)} className="btn-primary flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium">
               <Plus className="w-4 h-4" />
@@ -102,20 +157,15 @@ const Staff = () => {
           </div>
         </div>
 
-        {/* Search */}
         <div className="relative section-reveal stagger-1">
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <input
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            placeholder="Search by name or account number..."
-            className="input-field w-full pl-11"
-          />
+          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search by name or account number..." className="input-field w-full pl-11" />
         </div>
 
-        {/* Staff Table */}
         <div className="card-elevated overflow-hidden section-reveal stagger-2">
-          {filtered.length > 0 ? (
+          {loading ? (
+            <div className="p-12 text-center"><Loader2 className="w-8 h-8 animate-spin mx-auto text-primary" /></div>
+          ) : filtered.length > 0 ? (
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>
@@ -131,11 +181,11 @@ const Staff = () => {
                 <tbody>
                   {filtered.map(member => (
                     <tr key={member.id} className="border-b last:border-0 hover:bg-muted/30 transition-colors">
-                      <td className="p-4 font-medium">{member.name}</td>
-                      <td className="p-4 text-muted-foreground">{member.bankName}</td>
-                      <td className="p-4 font-mono text-sm">{member.accountNumber}</td>
+                      <td className="p-4 font-medium">{member.full_name}</td>
+                      <td className="p-4 text-muted-foreground">{member.bank_name}</td>
+                      <td className="p-4 font-mono text-sm">{member.account_number}</td>
                       <td className="p-4 text-right font-medium tabular-nums">{formatNaira(member.salary)}</td>
-                      <td className="p-4 text-center">{member.payDay}th</td>
+                      <td className="p-4 text-center">{member.pay_day}th</td>
                       <td className="p-4 text-right">
                         <button onClick={() => removeStaff(member.id)} className="p-2 rounded-md hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors">
                           <Trash2 className="w-4 h-4" />
@@ -151,14 +201,11 @@ const Staff = () => {
               <Users className="w-10 h-10 mx-auto mb-3 opacity-40" />
               <p className="font-medium">No staff members yet</p>
               <p className="text-sm mt-1">Add staff manually or import from a CSV file</p>
-              <p className="text-xs mt-3 bg-muted/50 rounded-lg p-3 max-w-md mx-auto">
-                CSV format: Name, Bank Name, Account Number, Salary, Pay Day
-              </p>
+              <p className="text-xs mt-3 bg-muted/50 rounded-lg p-3 max-w-md mx-auto">CSV format: Name, Bank Name, Account Number, Salary, Pay Day</p>
             </div>
           )}
         </div>
 
-        {/* Add Staff Modal */}
         {showAddModal && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-foreground/40" onClick={() => setShowAddModal(false)}>
             <div className="bg-card rounded-2xl shadow-xl w-full max-w-md p-6 section-reveal" onClick={e => e.stopPropagation()}>
@@ -166,15 +213,29 @@ const Staff = () => {
               <form onSubmit={handleAddStaff} className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium mb-1.5">Full Name</label>
-                  <input value={newStaff.name} onChange={e => setNewStaff(p => ({ ...p, name: e.target.value }))} required className="input-field w-full" placeholder="Adebayo Ogundimu" />
+                  <input value={newStaff.full_name} onChange={e => setNewStaff(p => ({ ...p, full_name: e.target.value }))} required className="input-field w-full" placeholder="Adebayo Ogundimu" />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium mb-1.5">Bank Name</label>
-                  <input value={newStaff.bankName} onChange={e => setNewStaff(p => ({ ...p, bankName: e.target.value }))} required className="input-field w-full" placeholder="First Bank" />
+                  <label className="block text-sm font-medium mb-1.5">Bank</label>
+                  {banks.length > 0 ? (
+                    <select
+                      value={newStaff.bank_code}
+                      onChange={e => setNewStaff(p => ({ ...p, bank_code: e.target.value }))}
+                      required
+                      className="input-field w-full"
+                    >
+                      <option value="">Select bank</option>
+                      {banks.map(b => (
+                        <option key={b.code} value={b.code}>{b.name}</option>
+                      ))}
+                    </select>
+                  ) : (
+                    <input value={newStaff.bank_name} onChange={e => setNewStaff(p => ({ ...p, bank_name: e.target.value }))} required className="input-field w-full" placeholder="First Bank" />
+                  )}
                 </div>
                 <div>
                   <label className="block text-sm font-medium mb-1.5">Account Number</label>
-                  <input value={newStaff.accountNumber} onChange={e => setNewStaff(p => ({ ...p, accountNumber: e.target.value }))} required maxLength={10} className="input-field w-full" placeholder="0123456789" />
+                  <input value={newStaff.account_number} onChange={e => setNewStaff(p => ({ ...p, account_number: e.target.value }))} required maxLength={10} className="input-field w-full" placeholder="0123456789" />
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
@@ -183,12 +244,14 @@ const Staff = () => {
                   </div>
                   <div>
                     <label className="block text-sm font-medium mb-1.5">Pay Day</label>
-                    <input type="number" min={1} max={28} value={newStaff.payDay} onChange={e => setNewStaff(p => ({ ...p, payDay: e.target.value }))} required className="input-field w-full" />
+                    <input type="number" min={1} max={28} value={newStaff.pay_day} onChange={e => setNewStaff(p => ({ ...p, pay_day: e.target.value }))} required className="input-field w-full" />
                   </div>
                 </div>
                 <div className="flex gap-3 pt-2">
                   <button type="button" onClick={() => setShowAddModal(false)} className="flex-1 py-2.5 rounded-lg border text-sm font-medium hover:bg-muted transition-colors">Cancel</button>
-                  <button type="submit" className="flex-1 btn-primary py-2.5 rounded-lg text-sm font-medium">Add Staff</button>
+                  <button type="submit" disabled={saving} className="flex-1 btn-primary py-2.5 rounded-lg text-sm font-medium flex items-center justify-center gap-2">
+                    {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Add Staff'}
+                  </button>
                 </div>
               </form>
             </div>
