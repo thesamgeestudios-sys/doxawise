@@ -19,14 +19,13 @@ serve(async (req) => {
 
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_PUBLISHABLE_KEY")!,
+      Deno.env.get("SUPABASE_ANON_KEY")!,
       { global: { headers: { Authorization: authHeader } } }
     );
 
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     if (authError || !user) throw new Error("Unauthorized");
 
-    // Get profile
     const adminClient = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
@@ -54,7 +53,6 @@ serve(async (req) => {
 
     const txRef = `PSW-${user.id.slice(0, 8)}-${Date.now()}`;
 
-    // Create Flutterwave virtual account
     const flwRes = await fetch("https://api.flutterwave.com/v3/virtual-account-numbers", {
       method: "POST",
       headers: {

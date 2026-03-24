@@ -1,9 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import DashboardLayout from '@/components/DashboardLayout';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { flutterwaveApi } from '@/lib/flutterwave';
-import { CreditCard, Plus, Calendar, AlertCircle, Send, Loader2, CheckCircle, XCircle, Clock } from 'lucide-react';
+import { CreditCard, Plus, Calendar, AlertCircle, Send, Loader2, CheckCircle, XCircle, Clock, Search, UserCheck } from 'lucide-react';
 import { formatNaira, calculateFee } from '@/lib/constants';
 import { toast } from 'sonner';
 
@@ -32,7 +32,11 @@ const Payments = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [processing, setProcessing] = useState<string | null>(null);
-  const [form, setForm] = useState({ recipientName: '', bankCode: '', accountNumber: '', amount: '', scheduledDate: '' });
+  const [bankSearch, setBankSearch] = useState('');
+  const [showBankDropdown, setShowBankDropdown] = useState(false);
+  const [resolvingAccount, setResolvingAccount] = useState(false);
+  const [resolvedName, setResolvedName] = useState('');
+  const [form, setForm] = useState({ recipientName: '', bankCode: '', bankName: '', accountNumber: '', amount: '', scheduledDate: '' });
 
   useEffect(() => {
     if (user) {
@@ -61,18 +65,51 @@ const Payments = () => {
     }
   };
 
+  const filteredBanks = banks.filter(b =>
+    b.name.toLowerCase().includes(bankSearch.toLowerCase())
+  );
+
+  const resolveAccount = useCallback(async (accountNumber: string, bankCode: string) => {
+    if (accountNumber.length !== 10 || !bankCode) return;
+    setResolvingAccount(true);
+    setResolvedName('');
+    try {
+      const result = await flutterwaveApi.resolveAccount(accountNumber, bankCode);
+      if (result.success && result.data?.account_name) {
+        setResolvedName(result.data.account_name);
+        setForm(p => ({ ...p, recipientName: result.data.account_name }));
+      }
+    } catch (err) {
+      console.error('Account resolve failed:', err);
+    }
+    setResolvingAccount(false);
+  }, []);
+
+  useEffect(() => {
+    if (form.accountNumber.length === 10 && form.bankCode) {
+      resolveAccount(form.accountNumber, form.bankCode);
+    } else {
+      setResolvedName('');
+    }
+  }, [form.accountNumber, form.bankCode, resolveAccount]);
+
+  const selectBank = (bank: Bank) => {
+    setForm(p => ({ ...p, bankCode: bank.code, bankName: bank.name }));
+    setBankSearch(bank.name);
+    setShowBankDropdown(false);
+  };
+
   const handleSchedule = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
 
     const amount = parseFloat(form.amount);
     const fee = calculateFee(amount);
-    const selectedBank = banks.find(b => b.code === form.bankCode);
 
     const { error } = await supabase.from('scheduled_payments').insert({
       user_id: user!.id,
       recipient_name: form.recipientName,
-      bank_name: selectedBank?.name || form.bankCode,
+      bank_name: form.bankName || form.bankCode,
       account_number: form.accountNumber,
       amount,
       fee,
@@ -85,7 +122,9 @@ const Payments = () => {
       toast.error(error.message);
     } else {
       toast.success(`Payment of ${formatNaira(amount)} scheduled`);
-      setForm({ recipientName: '', bankCode: '', accountNumber: '', amount: '', scheduledDate: '' });
+      setForm({ recipientName: '', bankCode: '', bankName: '', accountNumber: '', amount: '', scheduledDate: '' });
+      setBankSearch('');
+      setResolvedName('');
       setShowScheduleModal(false);
       loadPayments();
     }
@@ -138,18 +177,18 @@ const Payments = () => {
             <h1 className="text-2xl font-bold">Payment Scheduling</h1>
             <p className="text-muted-foreground">Schedule single or batch payments</p>
           </div>
-          <button onClick={() => setShowScheduleModal(true)} className="btn-primary flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-medium">
+          <button onClick={() => setShowScheduleModal(true)} className="btn-gradient flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-medium">
             <Plus className="w-4 h-4" />
             Schedule Payment
           </button>
         </div>
 
-        <div className="bg-primary/5 border border-primary/20 rounded-xl p-4 flex items-start gap-3 section-reveal stagger-1">
-          <AlertCircle className="w-5 h-5 text-primary mt-0.5 shrink-0" />
+        <div className="bg-[hsl(var(--info))]/5 border border-[hsl(var(--info))]/20 rounded-xl p-4 flex items-start gap-3 section-reveal stagger-1">
+          <AlertCircle className="w-5 h-5 text-[hsl(var(--info))] mt-0.5 shrink-0" />
           <div className="text-sm">
             <p className="font-medium text-foreground">How payments work</p>
             <p className="text-muted-foreground mt-1">
-              Scheduled payments are deducted from your wallet balance. A fee of 0.3% (max ₦1,000) applies per transfer. Click "Process" on any pending payment to execute it via Flutterwave.
+              Scheduled payments are deducted from your wallet balance. A fee of 0.3% (max ₦1,000) applies per transfer. Click "Process" on any pending payment to execute it.
             </p>
           </div>
         </div>
@@ -216,28 +255,58 @@ const Payments = () => {
 
         {showScheduleModal && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-foreground/40" onClick={() => setShowScheduleModal(false)}>
-            <div className="bg-card rounded-2xl shadow-xl w-full max-w-md p-6 section-reveal" onClick={e => e.stopPropagation()}>
+            <div className="bg-card rounded-2xl shadow-xl w-full max-w-md p-6 section-reveal max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
               <h2 className="text-xl font-bold mb-6">Schedule Payment</h2>
               <form onSubmit={handleSchedule} className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium mb-1.5">Recipient Name</label>
-                  <input value={form.recipientName} onChange={e => setForm(p => ({ ...p, recipientName: e.target.value }))} required className="input-field w-full" placeholder="Fatima Bello" />
-                </div>
-                <div>
+                {/* Bank with search */}
+                <div className="relative">
                   <label className="block text-sm font-medium mb-1.5">Bank</label>
-                  {banks.length > 0 ? (
-                    <select value={form.bankCode} onChange={e => setForm(p => ({ ...p, bankCode: e.target.value }))} required className="input-field w-full">
-                      <option value="">Select bank</option>
-                      {banks.map(b => <option key={b.code} value={b.code}>{b.name}</option>)}
-                    </select>
-                  ) : (
-                    <input value={form.bankCode} onChange={e => setForm(p => ({ ...p, bankCode: e.target.value }))} required className="input-field w-full" placeholder="GTBank" />
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                    <input
+                      value={bankSearch}
+                      onChange={e => { setBankSearch(e.target.value); setShowBankDropdown(true); setForm(p => ({ ...p, bankCode: '', bankName: '' })); }}
+                      onFocus={() => setShowBankDropdown(true)}
+                      required={!form.bankCode}
+                      className="input-field w-full pl-10"
+                      placeholder="Search for a bank..."
+                      autoComplete="off"
+                    />
+                  </div>
+                  {showBankDropdown && filteredBanks.length > 0 && (
+                    <div className="absolute z-20 w-full mt-1 bg-card border rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                      {filteredBanks.map(b => (
+                        <button key={b.code} type="button" onClick={() => selectBank(b)} className="w-full text-left px-4 py-2.5 text-sm hover:bg-muted/60 transition-colors">
+                          {b.name}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                  {form.bankCode && (
+                    <p className="text-xs text-[hsl(var(--success))] mt-1 flex items-center gap-1">
+                      <CheckCircle className="w-3 h-3" /> {form.bankName}
+                    </p>
                   )}
                 </div>
+
                 <div>
                   <label className="block text-sm font-medium mb-1.5">Account Number</label>
-                  <input value={form.accountNumber} onChange={e => setForm(p => ({ ...p, accountNumber: e.target.value }))} required maxLength={10} className="input-field w-full" placeholder="0123456789" />
+                  <input value={form.accountNumber} onChange={e => setForm(p => ({ ...p, accountNumber: e.target.value.replace(/\D/g, '') }))} required maxLength={10} className="input-field w-full" placeholder="0123456789" />
+                  {resolvingAccount && (
+                    <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1"><Loader2 className="w-3 h-3 animate-spin" /> Resolving account...</p>
+                  )}
+                  {resolvedName && (
+                    <p className="text-xs text-[hsl(var(--success))] mt-1 flex items-center gap-1 font-medium">
+                      <UserCheck className="w-3 h-3" /> {resolvedName}
+                    </p>
+                  )}
                 </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-1.5">Recipient Name</label>
+                  <input value={form.recipientName} onChange={e => setForm(p => ({ ...p, recipientName: e.target.value }))} required className="input-field w-full" placeholder="Auto-filled from account" />
+                </div>
+
                 <div>
                   <label className="block text-sm font-medium mb-1.5">Amount (₦)</label>
                   <input type="number" value={form.amount} onChange={e => setForm(p => ({ ...p, amount: e.target.value }))} required min={100} className="input-field w-full" placeholder="50000" />
@@ -252,7 +321,7 @@ const Payments = () => {
                   <input type="date" value={form.scheduledDate} onChange={e => setForm(p => ({ ...p, scheduledDate: e.target.value }))} required className="input-field w-full" />
                 </div>
                 <div className="flex gap-3 pt-2">
-                  <button type="button" onClick={() => setShowScheduleModal(false)} className="flex-1 py-2.5 rounded-lg border text-sm font-medium hover:bg-muted transition-colors">Cancel</button>
+                  <button type="button" onClick={() => { setShowScheduleModal(false); setBankSearch(''); setResolvedName(''); }} className="flex-1 py-2.5 rounded-lg border text-sm font-medium hover:bg-muted transition-colors">Cancel</button>
                   <button type="submit" disabled={saving} className="flex-1 btn-primary py-2.5 rounded-lg text-sm font-medium flex items-center justify-center gap-2">
                     {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Send className="w-4 h-4" /> Schedule</>}
                   </button>

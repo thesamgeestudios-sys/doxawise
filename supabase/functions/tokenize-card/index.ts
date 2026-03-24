@@ -21,7 +21,7 @@ serve(async (req) => {
 
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_PUBLISHABLE_KEY")!,
+      Deno.env.get("SUPABASE_ANON_KEY")!,
       { global: { headers: { Authorization: authHeader } } }
     );
 
@@ -32,9 +32,7 @@ serve(async (req) => {
     const { action } = body;
 
     if (action === "initialize") {
-      // Initialize a card charge to get the token
       const { card_number, cvv, expiry_month, expiry_year, amount } = body;
-
       const txRef = `PSW-TOKEN-${Date.now()}`;
 
       const payload = {
@@ -43,18 +41,12 @@ serve(async (req) => {
         expiry_month,
         expiry_year,
         currency: "NGN",
-        amount: amount || 50, // small charge for tokenization
+        amount: amount || 50,
         email: user.email,
         tx_ref: txRef,
         redirect_url: `${Deno.env.get("SUPABASE_URL")}/functions/v1/tokenize-card`,
       };
 
-      // Encrypt payload using 3DES
-      const { encryptPayload } = await import("./encrypt.ts").catch(() => ({
-        encryptPayload: null,
-      }));
-
-      // For Flutterwave test mode, we can use direct charge
       const chargeRes = await fetch("https://api.flutterwave.com/v3/charges?type=card", {
         method: "POST",
         headers: {
@@ -73,7 +65,6 @@ serve(async (req) => {
     }
 
     if (action === "validate") {
-      // Validate OTP/PIN for card charge
       const { flw_ref, otp } = body;
 
       const validateRes = await fetch("https://api.flutterwave.com/v3/validate-charge", {

@@ -6,43 +6,43 @@
 
 @layer base {
   :root {
-    --background: 210 20% 98%;
-    --foreground: 220 20% 10%;
+    --background: 220 16% 96%;
+    --foreground: 222 22% 10%;
 
     --card: 0 0% 100%;
-    --card-foreground: 220 20% 10%;
+    --card-foreground: 222 22% 10%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 220 20% 10%;
+    --popover-foreground: 222 22% 10%;
 
-    --primary: 152 56% 28%;
+    --primary: 222 62% 42%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 210 16% 93%;
-    --secondary-foreground: 220 20% 10%;
+    --secondary: 220 14% 92%;
+    --secondary-foreground: 222 22% 10%;
 
-    --muted: 210 16% 93%;
+    --muted: 220 14% 92%;
     --muted-foreground: 220 10% 46%;
 
     --accent: 38 92% 50%;
-    --accent-foreground: 0 0% 100%;
+    --accent-foreground: 30 80% 15%;
 
     --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 214 20% 89%;
-    --input: 214 20% 89%;
-    --ring: 152 56% 28%;
+    --border: 220 16% 88%;
+    --input: 220 16% 88%;
+    --ring: 222 62% 42%;
 
     --radius: 0.75rem;
 
-    --sidebar-background: 152 56% 22%;
-    --sidebar-foreground: 0 0% 95%;
+    --sidebar-background: 222 62% 18%;
+    --sidebar-foreground: 220 20% 92%;
     --sidebar-primary: 38 92% 50%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 152 46% 18%;
-    --sidebar-accent-foreground: 0 0% 95%;
-    --sidebar-border: 152 40% 30%;
+    --sidebar-accent: 222 52% 24%;
+    --sidebar-accent-foreground: 220 20% 92%;
+    --sidebar-border: 222 40% 28%;
     --sidebar-ring: 38 92% 50%;
 
     /* Custom tokens */
@@ -52,9 +52,17 @@
     --warning-foreground: 30 80% 15%;
     --info: 210 80% 52%;
     --info-foreground: 0 0% 100%;
+    --purple: 262 60% 56%;
+    --purple-foreground: 0 0% 100%;
+    --teal: 174 62% 38%;
+    --teal-foreground: 0 0% 100%;
 
     --surface-elevated: 0 0% 100%;
-    --surface-sunken: 210 20% 96%;
+    --surface-sunken: 220 16% 94%;
+
+    --gradient-primary: linear-gradient(135deg, hsl(222 62% 42%), hsl(262 60% 56%));
+    --gradient-accent: linear-gradient(135deg, hsl(38 92% 50%), hsl(20 90% 55%));
+    --gradient-success: linear-gradient(135deg, hsl(152 56% 40%), hsl(174 62% 38%));
   }
 }
 
@@ -99,6 +107,11 @@
     @apply bg-accent text-accent-foreground hover:bg-accent/90 active:scale-[0.98] transition-all duration-150;
   }
 
+  .btn-gradient {
+    background: var(--gradient-primary);
+    @apply text-primary-foreground hover:opacity-90 active:scale-[0.98] transition-all duration-150;
+  }
+
   .input-field {
     @apply border border-input bg-card rounded-lg px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all duration-150;
   }
@@ -113,6 +126,15 @@
 
   .badge-info {
     @apply bg-[hsl(var(--info))]/10 text-[hsl(var(--info))] text-xs font-medium px-2.5 py-1 rounded-full;
+  }
+
+  .badge-purple {
+    @apply bg-[hsl(var(--purple))]/10 text-[hsl(var(--purple))] text-xs font-medium px-2.5 py-1 rounded-full;
+  }
+
+  .gradient-card {
+    background: var(--gradient-primary);
+    @apply text-primary-foreground;
   }
 
   .section-reveal {

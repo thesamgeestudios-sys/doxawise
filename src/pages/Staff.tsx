@@ -1,9 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import DashboardLayout from '@/components/DashboardLayout';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { flutterwaveApi } from '@/lib/flutterwave';
-import { Users, Plus, Upload, Search, Trash2, Loader2 } from 'lucide-react';
+import { Users, Plus, Upload, Search, Trash2, Loader2, CheckCircle, UserCheck } from 'lucide-react';
 import { toast } from 'sonner';
 import { formatNaira } from '@/lib/constants';
 
@@ -28,8 +28,12 @@ const Staff = () => {
   const [banks, setBanks] = useState<Bank[]>([]);
   const [showAddModal, setShowAddModal] = useState(false);
   const [search, setSearch] = useState('');
+  const [bankSearch, setBankSearch] = useState('');
+  const [showBankDropdown, setShowBankDropdown] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [resolvingAccount, setResolvingAccount] = useState(false);
+  const [resolvedName, setResolvedName] = useState('');
   const [newStaff, setNewStaff] = useState({ full_name: '', bank_code: '', bank_name: '', account_number: '', salary: '', pay_day: '25' });
 
   useEffect(() => {
@@ -55,16 +59,48 @@ const Staff = () => {
     }
   };
 
+  const filteredBanks = banks.filter(b =>
+    b.name.toLowerCase().includes(bankSearch.toLowerCase())
+  );
+
+  const resolveAccount = useCallback(async (accountNumber: string, bankCode: string) => {
+    if (accountNumber.length !== 10 || !bankCode) return;
+    setResolvingAccount(true);
+    setResolvedName('');
+    try {
+      const result = await flutterwaveApi.resolveAccount(accountNumber, bankCode);
+      if (result.success && result.data?.account_name) {
+        setResolvedName(result.data.account_name);
+        setNewStaff(p => ({ ...p, full_name: result.data.account_name }));
+      }
+    } catch (err) {
+      console.error('Account resolve failed:', err);
+    }
+    setResolvingAccount(false);
+  }, []);
+
+  useEffect(() => {
+    if (newStaff.account_number.length === 10 && newStaff.bank_code) {
+      resolveAccount(newStaff.account_number, newStaff.bank_code);
+    } else {
+      setResolvedName('');
+    }
+  }, [newStaff.account_number, newStaff.bank_code, resolveAccount]);
+
+  const selectBank = (bank: Bank) => {
+    setNewStaff(p => ({ ...p, bank_code: bank.code, bank_name: bank.name }));
+    setBankSearch(bank.name);
+    setShowBankDropdown(false);
+  };
+
   const handleAddStaff = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
 
-    const selectedBank = banks.find(b => b.code === newStaff.bank_code);
-
     const { error } = await supabase.from('staff').insert({
       user_id: user!.id,
       full_name: newStaff.full_name,
-      bank_name: selectedBank?.name || newStaff.bank_name || newStaff.bank_code,
+      bank_name: newStaff.bank_name || newStaff.bank_code,
       account_number: newStaff.account_number,
       salary: parseFloat(newStaff.salary) || 0,
       pay_day: parseInt(newStaff.pay_day) || 25,
@@ -76,6 +112,8 @@ const Staff = () => {
     } else {
       toast.success(`${newStaff.full_name} added successfully`);
       setNewStaff({ full_name: '', bank_code: '', bank_name: '', account_number: '', salary: '', pay_day: '25' });
+      setBankSearch('');
+      setResolvedName('');
       setShowAddModal(false);
       loadStaff();
     }
@@ -150,7 +188,7 @@ const Staff = () => {
               Import CSV
               <input type="file" accept=".csv,.txt" onChange={handleFileUpload} className="hidden" />
             </label>
-            <button onClick={() => setShowAddModal(true)} className="btn-primary flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium">
+            <button onClick={() => setShowAddModal(true)} className="btn-gradient flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium">
               <Plus className="w-4 h-4" />
               Add Staff
             </button>
@@ -208,34 +246,56 @@ const Staff = () => {
 
         {showAddModal && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-foreground/40" onClick={() => setShowAddModal(false)}>
-            <div className="bg-card rounded-2xl shadow-xl w-full max-w-md p-6 section-reveal" onClick={e => e.stopPropagation()}>
+            <div className="bg-card rounded-2xl shadow-xl w-full max-w-md p-6 section-reveal max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
               <h2 className="text-xl font-bold mb-6">Add Staff Member</h2>
               <form onSubmit={handleAddStaff} className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium mb-1.5">Full Name</label>
-                  <input value={newStaff.full_name} onChange={e => setNewStaff(p => ({ ...p, full_name: e.target.value }))} required className="input-field w-full" placeholder="Adebayo Ogundimu" />
-                </div>
-                <div>
+                {/* Bank with search */}
+                <div className="relative">
                   <label className="block text-sm font-medium mb-1.5">Bank</label>
-                  {banks.length > 0 ? (
-                    <select
-                      value={newStaff.bank_code}
-                      onChange={e => setNewStaff(p => ({ ...p, bank_code: e.target.value }))}
-                      required
-                      className="input-field w-full"
-                    >
-                      <option value="">Select bank</option>
-                      {banks.map(b => (
-                        <option key={b.code} value={b.code}>{b.name}</option>
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                    <input
+                      value={bankSearch}
+                      onChange={e => { setBankSearch(e.target.value); setShowBankDropdown(true); setNewStaff(p => ({ ...p, bank_code: '', bank_name: '' })); }}
+                      onFocus={() => setShowBankDropdown(true)}
+                      required={!newStaff.bank_code}
+                      className="input-field w-full pl-10"
+                      placeholder="Search for a bank..."
+                      autoComplete="off"
+                    />
+                  </div>
+                  {showBankDropdown && filteredBanks.length > 0 && (
+                    <div className="absolute z-20 w-full mt-1 bg-card border rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                      {filteredBanks.map(b => (
+                        <button key={b.code} type="button" onClick={() => selectBank(b)} className="w-full text-left px-4 py-2.5 text-sm hover:bg-muted/60 transition-colors">
+                          {b.name}
+                        </button>
                       ))}
-                    </select>
-                  ) : (
-                    <input value={newStaff.bank_name} onChange={e => setNewStaff(p => ({ ...p, bank_name: e.target.value }))} required className="input-field w-full" placeholder="First Bank" />
+                    </div>
+                  )}
+                  {newStaff.bank_code && (
+                    <p className="text-xs text-[hsl(var(--success))] mt-1 flex items-center gap-1">
+                      <CheckCircle className="w-3 h-3" /> {newStaff.bank_name}
+                    </p>
                   )}
                 </div>
+
                 <div>
                   <label className="block text-sm font-medium mb-1.5">Account Number</label>
-                  <input value={newStaff.account_number} onChange={e => setNewStaff(p => ({ ...p, account_number: e.target.value }))} required maxLength={10} className="input-field w-full" placeholder="0123456789" />
+                  <input value={newStaff.account_number} onChange={e => setNewStaff(p => ({ ...p, account_number: e.target.value.replace(/\D/g, '') }))} required maxLength={10} className="input-field w-full" placeholder="0123456789" />
+                  {resolvingAccount && (
+                    <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1"><Loader2 className="w-3 h-3 animate-spin" /> Resolving account...</p>
+                  )}
+                  {resolvedName && (
+                    <p className="text-xs text-[hsl(var(--success))] mt-1 flex items-center gap-1 font-medium">
+                      <UserCheck className="w-3 h-3" /> {resolvedName}
+                    </p>
+                  )}
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-1.5">Full Name</label>
+                  <input value={newStaff.full_name} onChange={e => setNewStaff(p => ({ ...p, full_name: e.target.value }))} required className="input-field w-full" placeholder="Auto-filled from account" />
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
@@ -248,7 +308,7 @@ const Staff = () => {
                   </div>
                 </div>
                 <div className="flex gap-3 pt-2">
-                  <button type="button" onClick={() => setShowAddModal(false)} className="flex-1 py-2.5 rounded-lg border text-sm font-medium hover:bg-muted transition-colors">Cancel</button>
+                  <button type="button" onClick={() => { setShowAddModal(false); setBankSearch(''); setResolvedName(''); }} className="flex-1 py-2.5 rounded-lg border text-sm font-medium hover:bg-muted transition-colors">Cancel</button>
                   <button type="submit" disabled={saving} className="flex-1 btn-primary py-2.5 rounded-lg text-sm font-medium flex items-center justify-center gap-2">
                     {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Add Staff'}
                   </button>
