@@ -3,9 +3,10 @@ import DashboardLayout from '@/components/DashboardLayout';
 import { formatNaira } from '@/lib/constants';
 import { flutterwaveApi } from '@/lib/flutterwave';
 import { supabase } from '@/integrations/supabase/client';
-import { Wallet, Users, CreditCard, TrendingUp, Copy, CheckCircle2, Loader2, Shield, ArrowUpRight, ArrowDownRight } from 'lucide-react';
+import { Wallet, Users, CreditCard, TrendingUp, Copy, CheckCircle2, Loader2, Shield, ArrowUpRight, ArrowDownRight, Banknote, BarChart3, PiggyBank } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
+import { useNavigate } from 'react-router-dom';
 
 interface Profile {
   business_name: string;
@@ -29,6 +30,7 @@ interface Transaction {
 
 const Dashboard = () => {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [copied, setCopied] = useState(false);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -111,13 +113,6 @@ const Dashboard = () => {
   const businessName = profile?.business_name || user?.user_metadata?.business_name || 'My Business';
   const balance = profile?.wallet_balance || 0;
 
-  const stats = [
-    { label: 'Wallet Balance', value: formatNaira(balance), icon: Wallet, color: 'text-primary' },
-    { label: 'Total Staff', value: staffCount.toString(), icon: Users, color: 'text-[hsl(var(--info))]' },
-    { label: 'Pending Payments', value: pendingPayments.toString(), icon: CreditCard, color: 'text-[hsl(var(--warning))]' },
-    { label: 'Total Disbursed', value: formatNaira(totalDisbursed), icon: TrendingUp, color: 'text-[hsl(var(--success))]' },
-  ];
-
   if (loading) {
     return (
       <DashboardLayout>
@@ -130,11 +125,11 @@ const Dashboard = () => {
 
   return (
     <DashboardLayout>
-      <div className="space-y-8">
+      <div className="space-y-6">
         {/* Greeting */}
         <div className="section-reveal">
           <h1 className="text-2xl sm:text-3xl font-bold">Welcome back, {profile?.first_name || user?.user_metadata?.first_name || 'there'}!</h1>
-          <p className="text-muted-foreground mt-1">{businessName} — Here's your payment overview</p>
+          <p className="text-muted-foreground mt-1">{businessName}</p>
         </div>
 
         {/* BVN Verification Banner */}
@@ -154,9 +149,10 @@ const Dashboard = () => {
           </div>
         )}
 
-        {/* Account Card */}
-        <div className="section-reveal stagger-1 card-elevated p-6 bg-primary text-primary-foreground relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-48 h-48 rounded-full bg-primary-foreground/5 -translate-y-1/2 translate-x-1/4" />
+        {/* Account Card - gradient */}
+        <div className="section-reveal stagger-1 rounded-2xl p-6 text-primary-foreground relative overflow-hidden gradient-card">
+          <div className="absolute top-0 right-0 w-64 h-64 rounded-full bg-white/5 -translate-y-1/2 translate-x-1/4" />
+          <div className="absolute bottom-0 left-0 w-40 h-40 rounded-full bg-white/5 translate-y-1/2 -translate-x-1/4" />
           <div className="relative z-10">
             <p className="text-sm opacity-80 mb-1">Virtual Account</p>
             <p className="text-xl font-bold mb-4">{businessName}</p>
@@ -167,7 +163,7 @@ const Dashboard = () => {
                   <p className="text-xs opacity-60 mb-1">Account Number</p>
                   <div className="flex items-center gap-2">
                     <span className="text-2xl font-bold tracking-wide">{profile.virtual_account_number}</span>
-                    <button onClick={copyAccount} className="p-1.5 rounded-md bg-primary-foreground/10 hover:bg-primary-foreground/20 transition-colors">
+                    <button onClick={copyAccount} className="p-1.5 rounded-md bg-white/10 hover:bg-white/20 transition-colors">
                       {copied ? <CheckCircle2 className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
                     </button>
                   </div>
@@ -187,7 +183,7 @@ const Dashboard = () => {
                 <button
                   onClick={handleCreateVirtualAccount}
                   disabled={creatingAccount}
-                  className="bg-primary-foreground/20 hover:bg-primary-foreground/30 px-5 py-2.5 rounded-lg text-sm font-medium flex items-center gap-2 transition-colors shrink-0"
+                  className="bg-white/20 hover:bg-white/30 px-5 py-2.5 rounded-lg text-sm font-medium flex items-center gap-2 transition-colors shrink-0"
                 >
                   {creatingAccount ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
                   Create Virtual Account
@@ -199,21 +195,63 @@ const Dashboard = () => {
 
         {/* Stats Grid */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          {stats.map((stat, i) => (
-            <div key={stat.label} className={`stat-card section-reveal stagger-${i + 1}`}>
-              <div className="flex items-center justify-between mb-3">
-                <stat.icon className={`w-5 h-5 ${stat.color}`} />
-              </div>
-              <p className="text-2xl font-bold">{stat.value}</p>
-              <p className="text-sm text-muted-foreground mt-1">{stat.label}</p>
+          <div className="stat-card section-reveal stagger-1 border-l-4 border-l-primary">
+            <Wallet className="w-5 h-5 text-primary mb-3" />
+            <p className="text-2xl font-bold">{formatNaira(balance)}</p>
+            <p className="text-sm text-muted-foreground mt-1">Wallet Balance</p>
+          </div>
+          <div className="stat-card section-reveal stagger-2 border-l-4 border-l-[hsl(var(--info))]">
+            <Users className="w-5 h-5 text-[hsl(var(--info))] mb-3" />
+            <p className="text-2xl font-bold">{staffCount}</p>
+            <p className="text-sm text-muted-foreground mt-1">Total Staff</p>
+          </div>
+          <div className="stat-card section-reveal stagger-3 border-l-4 border-l-[hsl(var(--warning))]">
+            <CreditCard className="w-5 h-5 text-[hsl(var(--warning))] mb-3" />
+            <p className="text-2xl font-bold">{pendingPayments}</p>
+            <p className="text-sm text-muted-foreground mt-1">Pending Payments</p>
+          </div>
+          <div className="stat-card section-reveal stagger-4 border-l-4 border-l-[hsl(var(--success))]">
+            <TrendingUp className="w-5 h-5 text-[hsl(var(--success))] mb-3" />
+            <p className="text-2xl font-bold">{formatNaira(totalDisbursed)}</p>
+            <p className="text-sm text-muted-foreground mt-1">Total Disbursed</p>
+          </div>
+        </div>
+
+        {/* Quick Actions */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 section-reveal stagger-2">
+          <button onClick={() => navigate('/dashboard/payments')} className="card-elevated p-4 text-center hover:border-primary/40 transition-colors group">
+            <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center mx-auto mb-2 group-hover:bg-primary/20 transition-colors">
+              <Banknote className="w-5 h-5 text-primary" />
             </div>
-          ))}
+            <p className="text-sm font-medium">Send Money</p>
+          </button>
+          <button onClick={() => navigate('/dashboard/staff')} className="card-elevated p-4 text-center hover:border-[hsl(var(--info))]/40 transition-colors group">
+            <div className="w-10 h-10 rounded-xl bg-[hsl(var(--info))]/10 flex items-center justify-center mx-auto mb-2 group-hover:bg-[hsl(var(--info))]/20 transition-colors">
+              <Users className="w-5 h-5 text-[hsl(var(--info))]" />
+            </div>
+            <p className="text-sm font-medium">Manage Staff</p>
+          </button>
+          <button onClick={() => navigate('/dashboard/cards')} className="card-elevated p-4 text-center hover:border-[hsl(var(--purple))]/40 transition-colors group">
+            <div className="w-10 h-10 rounded-xl bg-[hsl(var(--purple))]/10 flex items-center justify-center mx-auto mb-2 group-hover:bg-[hsl(var(--purple))]/20 transition-colors">
+              <CreditCard className="w-5 h-5 text-[hsl(var(--purple))]" />
+            </div>
+            <p className="text-sm font-medium">Add Card</p>
+          </button>
+          <button onClick={() => navigate('/dashboard/transactions')} className="card-elevated p-4 text-center hover:border-[hsl(var(--teal))]/40 transition-colors group">
+            <div className="w-10 h-10 rounded-xl bg-[hsl(var(--teal))]/10 flex items-center justify-center mx-auto mb-2 group-hover:bg-[hsl(var(--teal))]/20 transition-colors">
+              <BarChart3 className="w-5 h-5 text-[hsl(var(--teal))]" />
+            </div>
+            <p className="text-sm font-medium">Transactions</p>
+          </button>
         </div>
 
         {/* Recent Transactions */}
         <div className="card-elevated section-reveal stagger-3">
-          <div className="p-6 border-b">
+          <div className="p-6 border-b flex items-center justify-between">
             <h2 className="text-lg font-semibold">Recent Transactions</h2>
+            {transactions.length > 0 && (
+              <button onClick={() => navigate('/dashboard/transactions')} className="text-sm text-primary font-medium hover:underline">View All</button>
+            )}
           </div>
           {transactions.length > 0 ? (
             <div className="divide-y">
