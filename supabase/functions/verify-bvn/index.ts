@@ -19,7 +19,7 @@ serve(async (req) => {
 
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_PUBLISHABLE_KEY")!,
+      Deno.env.get("SUPABASE_ANON_KEY")!,
       { global: { headers: { Authorization: authHeader } } }
     );
 
@@ -29,7 +29,6 @@ serve(async (req) => {
     const { bvn } = await req.json();
     if (!bvn || bvn.length !== 11) throw new Error("BVN must be 11 digits");
 
-    // Call Flutterwave BVN verification
     const flwRes = await fetch("https://api.flutterwave.com/v3/bvn/verifications", {
       method: "POST",
       headers: {
@@ -48,7 +47,6 @@ serve(async (req) => {
     const flwData = await flwRes.json();
 
     if (flwData.status === "success") {
-      // Update profile as verified
       const adminClient = createClient(
         Deno.env.get("SUPABASE_URL")!,
         Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!

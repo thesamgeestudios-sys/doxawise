@@ -26,7 +26,7 @@ serve(async (req) => {
 
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_PUBLISHABLE_KEY")!,
+      Deno.env.get("SUPABASE_ANON_KEY")!,
       { global: { headers: { Authorization: authHeader } } }
     );
 
@@ -47,7 +47,6 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
-    // Get profile for business name & balance
     const { data: profile } = await adminClient
       .from("profiles")
       .select("*")
@@ -62,7 +61,6 @@ serve(async (req) => {
       throw new Error(`Insufficient wallet balance. Need ₦${totalDebit.toLocaleString()}, have ₦${(profile.wallet_balance || 0).toLocaleString()}`);
     }
 
-    // Initiate Flutterwave transfer
     const flwRes = await fetch("https://api.flutterwave.com/v3/transfers", {
       method: "POST",
       headers: {
@@ -86,13 +84,11 @@ serve(async (req) => {
     if (flwData.status === "success") {
       const newBalance = (profile.wallet_balance || 0) - totalDebit;
 
-      // Update wallet balance
       await adminClient
         .from("profiles")
         .update({ wallet_balance: newBalance })
         .eq("user_id", user.id);
 
-      // Record transaction
       await adminClient.from("transactions").insert({
         user_id: user.id,
         type: "debit",
@@ -102,7 +98,6 @@ serve(async (req) => {
         balance_after: newBalance,
       });
 
-      // Update scheduled payment if payment_id provided
       if (payment_id) {
         await adminClient
           .from("scheduled_payments")
@@ -115,7 +110,6 @@ serve(async (req) => {
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     } else {
-      // Update payment as failed
       if (payment_id) {
         await adminClient
           .from("scheduled_payments")
