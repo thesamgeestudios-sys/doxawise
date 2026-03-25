@@ -40,6 +40,15 @@ export const flutterwaveApi = {
     payment_id?: string;
   }) => callEdgeFunction("initiate-transfer", params),
 
+  batchTransfer: (transfers: Array<{
+    account_bank: string;
+    account_number: string;
+    amount: number;
+    recipient_name?: string;
+    payment_id?: string;
+    staff_id?: string;
+  }>) => callEdgeFunction("batch-transfer", { transfers }),
+
   tokenizeCard: (params: {
     action: "initialize" | "validate";
     card_number?: string;
