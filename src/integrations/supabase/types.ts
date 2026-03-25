@@ -16,11 +16,14 @@ export type Database = {
     Tables: {
       profiles: {
         Row: {
+          account_type: string
           business_name: string
+          business_name_locked: boolean
           bvn: string | null
           bvn_verified: boolean | null
           created_at: string
           first_name: string
+          flutterwave_customer_id: string | null
           id: string
           last_name: string
           phone: string | null
@@ -32,11 +35,14 @@ export type Database = {
           wallet_balance: number | null
         }
         Insert: {
+          account_type?: string
           business_name: string
+          business_name_locked?: boolean
           bvn?: string | null
           bvn_verified?: boolean | null
           created_at?: string
           first_name: string
+          flutterwave_customer_id?: string | null
           id?: string
           last_name: string
           phone?: string | null
@@ -48,11 +54,14 @@ export type Database = {
           wallet_balance?: number | null
         }
         Update: {
+          account_type?: string
           business_name?: string
+          business_name_locked?: boolean
           bvn?: string | null
           bvn_verified?: boolean | null
           created_at?: string
           first_name?: string
+          flutterwave_customer_id?: string | null
           id?: string
           last_name?: string
           phone?: string | null
