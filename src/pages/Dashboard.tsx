@@ -3,7 +3,7 @@ import DashboardLayout from '@/components/DashboardLayout';
 import { formatNaira } from '@/lib/constants';
 import { flutterwaveApi } from '@/lib/flutterwave';
 import { supabase } from '@/integrations/supabase/client';
-import { Wallet, Users, CreditCard, TrendingUp, Copy, CheckCircle2, Loader2, Shield, ArrowUpRight, ArrowDownRight, Banknote, BarChart3, PiggyBank } from 'lucide-react';
+import { Wallet, Users, CreditCard, TrendingUp, Copy, CheckCircle2, Loader2, Shield, ArrowUpRight, ArrowDownRight, Banknote, BarChart3, AlertTriangle, Lock } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
@@ -17,6 +17,8 @@ interface Profile {
   wallet_balance: number | null;
   bvn_verified: boolean | null;
   bvn: string | null;
+  business_name_locked: boolean;
+  account_type: string;
 }
 
 interface Transaction {
@@ -54,7 +56,7 @@ const Dashboard = () => {
       supabase.from('scheduled_payments').select('*').eq('user_id', user!.id),
     ]);
 
-    if (profileRes.data) setProfile(profileRes.data as Profile);
+    if (profileRes.data) setProfile(profileRes.data as unknown as Profile);
     if (txRes.data) setTransactions(txRes.data as Transaction[]);
     setStaffCount(staffRes.count || 0);
 
@@ -70,7 +72,7 @@ const Dashboard = () => {
     try {
       const result = await flutterwaveApi.createVirtualAccount();
       if (result.success) {
-        toast.success('Virtual account created!');
+        toast.success('Virtual account created! Your business name is now locked.');
         loadData();
       } else {
         toast.error(result.message || 'Failed to create virtual account');
@@ -126,7 +128,6 @@ const Dashboard = () => {
   return (
     <DashboardLayout>
       <div className="space-y-6">
-        {/* Greeting */}
         <div className="section-reveal">
           <h1 className="text-2xl sm:text-3xl font-bold">Welcome back, {profile?.first_name || user?.user_metadata?.first_name || 'there'}!</h1>
           <p className="text-muted-foreground mt-1">{businessName}</p>
@@ -149,12 +150,32 @@ const Dashboard = () => {
           </div>
         )}
 
-        {/* Account Card - gradient */}
+        {/* Business Name Lock Warning */}
+        {!profile?.virtual_account_number && (
+          <div className="bg-[hsl(var(--info))]/5 border border-[hsl(var(--info))]/20 rounded-xl p-4 flex items-start gap-3 section-reveal stagger-1">
+            <AlertTriangle className="w-5 h-5 text-[hsl(var(--info))] mt-0.5 shrink-0" />
+            <div className="text-sm">
+              <p className="font-medium text-foreground flex items-center gap-1.5"><Lock className="w-3.5 h-3.5" /> Important: Business Name Lock</p>
+              <p className="text-muted-foreground mt-1">
+                Once you create a virtual account, your <strong>business/company name cannot be changed</strong>. This name will appear on all transfers and your virtual account. Make sure your business name is correct before proceeding.
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* Account Card */}
         <div className="section-reveal stagger-1 rounded-2xl p-6 text-primary-foreground relative overflow-hidden gradient-card">
           <div className="absolute top-0 right-0 w-64 h-64 rounded-full bg-white/5 -translate-y-1/2 translate-x-1/4" />
           <div className="absolute bottom-0 left-0 w-40 h-40 rounded-full bg-white/5 translate-y-1/2 -translate-x-1/4" />
           <div className="relative z-10">
-            <p className="text-sm opacity-80 mb-1">Virtual Account</p>
+            <div className="flex items-center gap-2 mb-1">
+              <p className="text-sm opacity-80">Virtual Account</p>
+              {profile?.business_name_locked && (
+                <span className="bg-white/20 text-xs px-2 py-0.5 rounded-full flex items-center gap-1">
+                  <Lock className="w-3 h-3" /> Locked
+                </span>
+              )}
+            </div>
             <p className="text-xl font-bold mb-4">{businessName}</p>
 
             {profile?.virtual_account_number ? (

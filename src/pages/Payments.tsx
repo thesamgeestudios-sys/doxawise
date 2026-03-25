@@ -3,7 +3,7 @@ import DashboardLayout from '@/components/DashboardLayout';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { flutterwaveApi } from '@/lib/flutterwave';
-import { CreditCard, Plus, Calendar, AlertCircle, Send, Loader2, CheckCircle, XCircle, Clock, Search, UserCheck } from 'lucide-react';
+import { CreditCard, Plus, Calendar, AlertCircle, Send, Loader2, CheckCircle, XCircle, Clock, Search, UserCheck, Users, CheckSquare } from 'lucide-react';
 import { formatNaira, calculateFee } from '@/lib/constants';
 import { toast } from 'sonner';
 
@@ -24,24 +24,38 @@ interface Bank {
   name: string;
 }
 
+interface StaffMember {
+  id: string;
+  full_name: string;
+  bank_name: string;
+  account_number: string;
+  salary: number;
+  pay_day: number;
+}
+
 const Payments = () => {
   const { user } = useAuth();
   const [payments, setPayments] = useState<Payment[]>([]);
   const [banks, setBanks] = useState<Bank[]>([]);
+  const [staffList, setStaffList] = useState<StaffMember[]>([]);
   const [showScheduleModal, setShowScheduleModal] = useState(false);
+  const [showBatchModal, setShowBatchModal] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [processing, setProcessing] = useState<string | null>(null);
+  const [batchProcessing, setBatchProcessing] = useState(false);
   const [bankSearch, setBankSearch] = useState('');
   const [showBankDropdown, setShowBankDropdown] = useState(false);
   const [resolvingAccount, setResolvingAccount] = useState(false);
   const [resolvedName, setResolvedName] = useState('');
+  const [selectedStaff, setSelectedStaff] = useState<Set<string>>(new Set());
   const [form, setForm] = useState({ recipientName: '', bankCode: '', bankName: '', accountNumber: '', amount: '', scheduledDate: '' });
 
   useEffect(() => {
     if (user) {
       loadPayments();
       loadBanks();
+      loadStaff();
     }
   }, [user]);
 
@@ -63,6 +77,11 @@ const Payments = () => {
     } catch (err) {
       console.error('Failed to load banks:', err);
     }
+  };
+
+  const loadStaff = async () => {
+    const { data } = await supabase.from('staff').select('*').eq('user_id', user!.id).eq('is_active', true);
+    if (data) setStaffList(data as StaffMember[]);
   };
 
   const filteredBanks = banks.filter(b =>
@@ -155,6 +174,63 @@ const Payments = () => {
     setProcessing(null);
   };
 
+  const toggleStaffSelection = (id: string) => {
+    setSelectedStaff(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
+  const selectAllStaff = () => {
+    if (selectedStaff.size === staffList.length) {
+      setSelectedStaff(new Set());
+    } else {
+      setSelectedStaff(new Set(staffList.map(s => s.id)));
+    }
+  };
+
+  const handleBatchPayment = async () => {
+    if (selectedStaff.size === 0) {
+      toast.error('Select at least one staff member');
+      return;
+    }
+
+    setBatchProcessing(true);
+    const selected = staffList.filter(s => selectedStaff.has(s.id));
+    const transfers = selected.map(s => {
+      const bankObj = banks.find(b => b.name === s.bank_name);
+      return {
+        account_bank: bankObj?.code || s.bank_name,
+        account_number: s.account_number,
+        amount: s.salary,
+        recipient_name: s.full_name,
+        staff_id: s.id,
+      };
+    });
+
+    try {
+      const result = await flutterwaveApi.batchTransfer(transfers);
+      if (result.success) {
+        const successCount = result.results?.filter((r: any) => r.status === 'success').length || 0;
+        const failCount = result.results?.filter((r: any) => r.status === 'failed').length || 0;
+        toast.success(`Batch payment complete: ${successCount} succeeded, ${failCount} failed`);
+        setSelectedStaff(new Set());
+        setShowBatchModal(false);
+        loadPayments();
+      } else {
+        toast.error(result.error || 'Batch payment failed');
+      }
+    } catch (err: any) {
+      toast.error(err.message);
+    }
+    setBatchProcessing(false);
+  };
+
+  const batchTotal = staffList
+    .filter(s => selectedStaff.has(s.id))
+    .reduce((sum, s) => sum + s.salary + calculateFee(s.salary), 0);
+
   const statusIcon = (status: string) => {
     switch (status) {
       case 'completed': return <CheckCircle className="w-4 h-4 text-[hsl(var(--success))]" />;
@@ -177,10 +253,16 @@ const Payments = () => {
             <h1 className="text-2xl font-bold">Payment Scheduling</h1>
             <p className="text-muted-foreground">Schedule single or batch payments</p>
           </div>
-          <button onClick={() => setShowScheduleModal(true)} className="btn-gradient flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-medium">
-            <Plus className="w-4 h-4" />
-            Schedule Payment
-          </button>
+          <div className="flex gap-3">
+            <button onClick={() => setShowBatchModal(true)} className="flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-medium bg-[hsl(var(--teal))] text-[hsl(var(--teal-foreground))] hover:opacity-90 transition-all">
+              <Users className="w-4 h-4" />
+              Batch Pay Staff
+            </button>
+            <button onClick={() => setShowScheduleModal(true)} className="btn-gradient flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-medium">
+              <Plus className="w-4 h-4" />
+              Schedule Payment
+            </button>
+          </div>
         </div>
 
         <div className="bg-[hsl(var(--info))]/5 border border-[hsl(var(--info))]/20 rounded-xl p-4 flex items-start gap-3 section-reveal stagger-1">
@@ -188,7 +270,7 @@ const Payments = () => {
           <div className="text-sm">
             <p className="font-medium text-foreground">How payments work</p>
             <p className="text-muted-foreground mt-1">
-              Scheduled payments are deducted from your wallet balance. A fee of 0.3% (max ₦1,000) applies per transfer. Click "Process" on any pending payment to execute it.
+              Payments are deducted from your wallet balance. A fee of 0.3% (max ₦1,000) applies per transfer. Use <strong>Batch Pay Staff</strong> to pay multiple staff at once.
             </p>
           </div>
         </div>
@@ -253,12 +335,12 @@ const Payments = () => {
           )}
         </div>
 
+        {/* Schedule Single Payment Modal */}
         {showScheduleModal && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-foreground/40" onClick={() => setShowScheduleModal(false)}>
             <div className="bg-card rounded-2xl shadow-xl w-full max-w-md p-6 section-reveal max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
               <h2 className="text-xl font-bold mb-6">Schedule Payment</h2>
               <form onSubmit={handleSchedule} className="space-y-4">
-                {/* Bank with search */}
                 <div className="relative">
                   <label className="block text-sm font-medium mb-1.5">Bank</label>
                   <div className="relative">
@@ -327,6 +409,75 @@ const Payments = () => {
                   </button>
                 </div>
               </form>
+            </div>
+          </div>
+        )}
+
+        {/* Batch Payment Modal */}
+        {showBatchModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-foreground/40" onClick={() => setShowBatchModal(false)}>
+            <div className="bg-card rounded-2xl shadow-xl w-full max-w-lg p-6 section-reveal max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+              <h2 className="text-xl font-bold mb-2">Batch Pay Staff</h2>
+              <p className="text-sm text-muted-foreground mb-6">Select staff members to pay their registered salaries in one click.</p>
+
+              {staffList.length > 0 ? (
+                <>
+                  <div className="flex items-center justify-between mb-3">
+                    <button onClick={selectAllStaff} className="text-sm text-primary font-medium flex items-center gap-1.5">
+                      <CheckSquare className="w-4 h-4" />
+                      {selectedStaff.size === staffList.length ? 'Deselect All' : 'Select All'}
+                    </button>
+                    <span className="text-sm text-muted-foreground">{selectedStaff.size} selected</span>
+                  </div>
+
+                  <div className="border rounded-lg divide-y max-h-64 overflow-y-auto mb-4">
+                    {staffList.map(s => (
+                      <label key={s.id} className="flex items-center gap-3 px-4 py-3 hover:bg-muted/40 cursor-pointer transition-colors">
+                        <input
+                          type="checkbox"
+                          checked={selectedStaff.has(s.id)}
+                          onChange={() => toggleStaffSelection(s.id)}
+                          className="w-4 h-4 rounded border-input accent-primary"
+                        />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium truncate">{s.full_name}</p>
+                          <p className="text-xs text-muted-foreground">{s.bank_name} • {s.account_number}</p>
+                        </div>
+                        <div className="text-right shrink-0">
+                          <p className="text-sm font-semibold tabular-nums">{formatNaira(s.salary)}</p>
+                          <p className="text-xs text-muted-foreground">+ {formatNaira(calculateFee(s.salary))} fee</p>
+                        </div>
+                      </label>
+                    ))}
+                  </div>
+
+                  {selectedStaff.size > 0 && (
+                    <div className="bg-muted/50 rounded-lg p-4 mb-4">
+                      <div className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">Total (incl. fees)</span>
+                        <span className="font-bold text-lg">{formatNaira(batchTotal)}</span>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="flex gap-3">
+                    <button type="button" onClick={() => { setShowBatchModal(false); setSelectedStaff(new Set()); }} className="flex-1 py-2.5 rounded-lg border text-sm font-medium hover:bg-muted transition-colors">Cancel</button>
+                    <button
+                      onClick={handleBatchPayment}
+                      disabled={batchProcessing || selectedStaff.size === 0}
+                      className="flex-1 py-2.5 rounded-lg text-sm font-medium flex items-center justify-center gap-2 bg-[hsl(var(--teal))] text-[hsl(var(--teal-foreground))] hover:opacity-90 transition-all disabled:opacity-50"
+                    >
+                      {batchProcessing ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Send className="w-4 h-4" /> Pay {selectedStaff.size} Staff</>}
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <div className="text-center py-8 text-muted-foreground">
+                  <Users className="w-10 h-10 mx-auto mb-3 opacity-40" />
+                  <p className="font-medium">No staff members</p>
+                  <p className="text-sm mt-1">Add staff members first to use batch payments</p>
+                </div>
+              )}
             </div>
           </div>
         )}

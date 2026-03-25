@@ -52,6 +52,7 @@ serve(async (req) => {
     }
 
     const txRef = `PSW-${user.id.slice(0, 8)}-${Date.now()}`;
+    const narration = profile?.business_name || "PaySwift Account";
 
     const flwRes = await fetch("https://api.flutterwave.com/v3/virtual-account-numbers", {
       method: "POST",
@@ -67,11 +68,12 @@ serve(async (req) => {
         phonenumber: profile?.phone || "",
         firstname: profile?.first_name || user.user_metadata?.first_name || "",
         lastname: profile?.last_name || user.user_metadata?.last_name || "",
-        narration: profile?.business_name || "PaySwift User",
+        narration,
       }),
     });
 
     const flwData = await flwRes.json();
+    console.log("Flutterwave VA response:", JSON.stringify(flwData));
 
     if (flwData.status === "success" && flwData.data) {
       await adminClient
@@ -80,6 +82,8 @@ serve(async (req) => {
           virtual_account_number: flwData.data.account_number,
           virtual_account_bank: flwData.data.bank_name,
           virtual_account_ref: txRef,
+          flutterwave_customer_id: flwData.data.flw_ref || flwData.data.order_ref || null,
+          business_name_locked: true,
         })
         .eq("user_id", user.id);
 

@@ -5,23 +5,30 @@ import { supabase } from '@/integrations/supabase/client';
 import { APP_NAME, formatNaira } from '@/lib/constants';
 import {
   LayoutDashboard, Users, CreditCard, Settings, LogOut, FileText,
-  TrendingUp, DollarSign, Shield, Search, Loader2, Eye
+  TrendingUp, DollarSign, Shield, Search, Loader2, Eye, Edit2, Save, X, Ban, CheckCircle,
+  Wallet, AlertTriangle
 } from 'lucide-react';
+import { toast } from 'sonner';
 
 const AdminPanel = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'transactions' | 'settings'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'transactions' | 'payments' | 'settings'>('overview');
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Data
   const [profiles, setProfiles] = useState<any[]>([]);
   const [allTransactions, setAllTransactions] = useState<any[]>([]);
+  const [allPayments, setAllPayments] = useState<any[]>([]);
   const [userSearch, setUserSearch] = useState('');
   const [totalVolume, setTotalVolume] = useState(0);
   const [platformRevenue, setPlatformRevenue] = useState(0);
   const [pendingVerifications, setPendingVerifications] = useState(0);
+
+  // Edit user state
+  const [editingUser, setEditingUser] = useState<any>(null);
+  const [editForm, setEditForm] = useState({ wallet_balance: '', bvn_verified: false });
+  const [savingUser, setSavingUser] = useState(false);
 
   useEffect(() => {
     checkAdmin();
@@ -29,7 +36,6 @@ const AdminPanel = () => {
 
   const checkAdmin = async () => {
     if (!user) { navigate('/login'); return; }
-
     const { data } = await supabase
       .from('user_roles')
       .select('role')
@@ -48,8 +54,8 @@ const AdminPanel = () => {
   const loadAdminData = async () => {
     const [profilesRes, txRes, paymentsRes] = await Promise.all([
       supabase.from('profiles').select('*'),
-      supabase.from('transactions').select('*').order('created_at', { ascending: false }),
-      supabase.from('scheduled_payments').select('*'),
+      supabase.from('transactions').select('*').order('created_at', { ascending: false }).limit(200),
+      supabase.from('scheduled_payments').select('*').order('created_at', { ascending: false }).limit(200),
     ]);
 
     if (profilesRes.data) {
@@ -61,13 +67,44 @@ const AdminPanel = () => {
       setAllTransactions(txRes.data);
       const volume = txRes.data.reduce((sum: number, t: any) => sum + Number(t.amount), 0);
       setTotalVolume(volume);
-      // Revenue = sum of fees (0.3% capped at 1000 per tx debit)
       const debitTxs = txRes.data.filter((t: any) => t.type === 'debit');
       const revenue = debitTxs.reduce((sum: number, t: any) => sum + Math.min(Number(t.amount) * 0.003, 1000), 0);
       setPlatformRevenue(revenue);
     }
 
+    if (paymentsRes.data) {
+      setAllPayments(paymentsRes.data);
+    }
+
     setLoading(false);
+  };
+
+  const startEditUser = (profile: any) => {
+    setEditingUser(profile);
+    setEditForm({
+      wallet_balance: (profile.wallet_balance || 0).toString(),
+      bvn_verified: profile.bvn_verified || false,
+    });
+  };
+
+  const saveUserEdit = async () => {
+    if (!editingUser) return;
+    setSavingUser(true);
+    const { error } = await supabase
+      .from('profiles')
+      .update({
+        wallet_balance: parseFloat(editForm.wallet_balance) || 0,
+        bvn_verified: editForm.bvn_verified,
+      })
+      .eq('id', editingUser.id);
+    setSavingUser(false);
+    if (error) {
+      toast.error(error.message);
+    } else {
+      toast.success(`Updated ${editingUser.business_name}`);
+      setEditingUser(null);
+      loadAdminData();
+    }
   };
 
   if (loading) {
@@ -95,14 +132,15 @@ const AdminPanel = () => {
     { label: 'Total Users', value: profiles.length.toString(), icon: Users, color: 'text-primary' },
     { label: 'Total Volume', value: formatNaira(totalVolume), icon: TrendingUp, color: 'text-[hsl(var(--success))]' },
     { label: 'Platform Revenue', value: formatNaira(platformRevenue), icon: DollarSign, color: 'text-accent' },
-    { label: 'Pending Verifications', value: pendingVerifications.toString(), icon: Shield, color: 'text-[hsl(var(--warning))]' },
+    { label: 'Pending BVN', value: pendingVerifications.toString(), icon: Shield, color: 'text-[hsl(var(--warning))]' },
   ];
 
   const tabs = [
     { key: 'overview', label: 'Overview', icon: LayoutDashboard },
     { key: 'users', label: 'Users', icon: Users },
     { key: 'transactions', label: 'Transactions', icon: FileText },
-    { key: 'settings', label: 'Platform Settings', icon: Settings },
+    { key: 'payments', label: 'Payments', icon: CreditCard },
+    { key: 'settings', label: 'Settings', icon: Settings },
   ] as const;
 
   const filteredUsers = profiles.filter(p =>
@@ -112,6 +150,10 @@ const AdminPanel = () => {
     p.last_name?.toLowerCase().includes(userSearch.toLowerCase()) ||
     p.bvn?.includes(userSearch)
   );
+
+  const pendingPayments = allPayments.filter((p: any) => p.status === 'pending').length;
+  const completedPayments = allPayments.filter((p: any) => p.status === 'completed').length;
+  const failedPayments = allPayments.filter((p: any) => p.status === 'failed').length;
 
   return (
     <div className="min-h-screen bg-background">
@@ -160,7 +202,22 @@ const AdminPanel = () => {
               ))}
             </div>
 
-            <div className="card-elevated p-6 section-reveal stagger-3">
+            <div className="grid sm:grid-cols-3 gap-4 section-reveal stagger-3">
+              <div className="stat-card border-l-4 border-l-[hsl(var(--warning))]">
+                <p className="text-2xl font-bold">{pendingPayments}</p>
+                <p className="text-sm text-muted-foreground mt-1">Pending Payments</p>
+              </div>
+              <div className="stat-card border-l-4 border-l-[hsl(var(--success))]">
+                <p className="text-2xl font-bold">{completedPayments}</p>
+                <p className="text-sm text-muted-foreground mt-1">Completed Payments</p>
+              </div>
+              <div className="stat-card border-l-4 border-l-destructive">
+                <p className="text-2xl font-bold">{failedPayments}</p>
+                <p className="text-sm text-muted-foreground mt-1">Failed Payments</p>
+              </div>
+            </div>
+
+            <div className="card-elevated p-6 section-reveal stagger-4">
               <h2 className="text-lg font-semibold mb-4">Revenue Summary</h2>
               <p className="text-muted-foreground text-sm">Total platform revenue from transaction fees (0.3% per transaction, capped at ₦1,000).</p>
               <p className="text-3xl font-bold text-primary mt-4">{formatNaira(platformRevenue)}</p>
@@ -190,6 +247,7 @@ const AdminPanel = () => {
                         <th className="text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider p-4 hidden md:table-cell">Account</th>
                         <th className="text-right text-xs font-semibold text-muted-foreground uppercase tracking-wider p-4">Balance</th>
                         <th className="text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider p-4">BVN</th>
+                        <th className="text-right text-xs font-semibold text-muted-foreground uppercase tracking-wider p-4">Actions</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -204,6 +262,11 @@ const AdminPanel = () => {
                               {p.bvn_verified ? 'Verified' : 'Pending'}
                             </span>
                           </td>
+                          <td className="p-4 text-right">
+                            <button onClick={() => startEditUser(p)} className="p-2 rounded-md hover:bg-primary/10 text-muted-foreground hover:text-primary transition-colors">
+                              <Edit2 className="w-4 h-4" />
+                            </button>
+                          </td>
                         </tr>
                       ))}
                     </tbody>
@@ -216,6 +279,50 @@ const AdminPanel = () => {
                 <p className="font-medium">No users found</p>
               </div>
             )}
+
+            {/* Edit User Modal */}
+            {editingUser && (
+              <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-foreground/40" onClick={() => setEditingUser(null)}>
+                <div className="bg-card rounded-2xl shadow-xl w-full max-w-md p-6 section-reveal" onClick={e => e.stopPropagation()}>
+                  <div className="flex items-center justify-between mb-6">
+                    <h2 className="text-xl font-bold">Edit User</h2>
+                    <button onClick={() => setEditingUser(null)} className="p-2 hover:bg-muted rounded-lg"><X className="w-4 h-4" /></button>
+                  </div>
+                  <div className="mb-4 p-3 bg-muted/50 rounded-lg">
+                    <p className="font-medium">{editingUser.business_name}</p>
+                    <p className="text-sm text-muted-foreground">{editingUser.first_name} {editingUser.last_name}</p>
+                  </div>
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium mb-1.5">Wallet Balance (₦)</label>
+                      <input
+                        type="number"
+                        value={editForm.wallet_balance}
+                        onChange={e => setEditForm(p => ({ ...p, wallet_balance: e.target.value }))}
+                        className="input-field w-full"
+                      />
+                    </div>
+                    <div>
+                      <label className="flex items-center gap-3 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={editForm.bvn_verified}
+                          onChange={e => setEditForm(p => ({ ...p, bvn_verified: e.target.checked }))}
+                          className="w-4 h-4 rounded border-input accent-primary"
+                        />
+                        <span className="text-sm font-medium">BVN Verified</span>
+                      </label>
+                    </div>
+                    <div className="flex gap-3 pt-2">
+                      <button onClick={() => setEditingUser(null)} className="flex-1 py-2.5 rounded-lg border text-sm font-medium hover:bg-muted transition-colors">Cancel</button>
+                      <button onClick={saveUserEdit} disabled={savingUser} className="flex-1 btn-primary py-2.5 rounded-lg text-sm font-medium flex items-center justify-center gap-2">
+                        {savingUser ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Save className="w-4 h-4" /> Save Changes</>}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         )}
 
@@ -223,13 +330,13 @@ const AdminPanel = () => {
           <div className="card-elevated overflow-hidden section-reveal">
             {allTransactions.length > 0 ? (
               <div className="divide-y">
-                {allTransactions.slice(0, 50).map(tx => (
+                {allTransactions.slice(0, 100).map(tx => (
                   <div key={tx.id} className="flex items-center justify-between px-6 py-4 hover:bg-muted/30 transition-colors">
                     <div className="min-w-0">
                       <p className="text-sm font-medium truncate">{tx.description || tx.type}</p>
                       <p className="text-xs text-muted-foreground">
                         {new Date(tx.created_at).toLocaleDateString('en-NG', { day: 'numeric', month: 'short', year: 'numeric' })}
-                        {tx.reference && <span className="ml-2 font-mono">Ref: {tx.reference.slice(0, 16)}</span>}
+                        {tx.reference && <span className="ml-2 font-mono">Ref: {tx.reference.slice(0, 20)}</span>}
                       </p>
                     </div>
                     <p className={`font-semibold tabular-nums shrink-0 ml-4 ${tx.type === 'credit' ? 'text-[hsl(var(--success))]' : 'text-destructive'}`}>
@@ -242,6 +349,57 @@ const AdminPanel = () => {
               <div className="p-12 text-center text-muted-foreground">
                 <FileText className="w-10 h-10 mx-auto mb-3 opacity-40" />
                 <p className="font-medium">No transactions yet</p>
+              </div>
+            )}
+          </div>
+        )}
+
+        {activeTab === 'payments' && (
+          <div className="card-elevated overflow-hidden section-reveal">
+            {allPayments.length > 0 ? (
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b bg-muted/50">
+                      <th className="text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider p-4">Recipient</th>
+                      <th className="text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider p-4 hidden sm:table-cell">Bank</th>
+                      <th className="text-right text-xs font-semibold text-muted-foreground uppercase tracking-wider p-4">Amount</th>
+                      <th className="text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider p-4">Status</th>
+                      <th className="text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider p-4 hidden md:table-cell">Date</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {allPayments.map((p: any) => (
+                      <tr key={p.id} className="border-b last:border-0 hover:bg-muted/30 transition-colors">
+                        <td className="p-4">
+                          <p className="font-medium">{p.recipient_name}</p>
+                          <p className="text-xs text-muted-foreground font-mono">{p.account_number}</p>
+                        </td>
+                        <td className="p-4 text-muted-foreground hidden sm:table-cell">{p.bank_name}</td>
+                        <td className="p-4 text-right font-medium tabular-nums">{formatNaira(p.amount)}</td>
+                        <td className="p-4">
+                          <span className={`inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full ${
+                            p.status === 'completed' ? 'badge-success' :
+                            p.status === 'failed' ? 'bg-destructive/10 text-destructive' :
+                            'badge-warning'
+                          }`}>
+                            {p.status === 'completed' ? <CheckCircle className="w-3 h-3" /> :
+                             p.status === 'failed' ? <Ban className="w-3 h-3" /> :
+                             <AlertTriangle className="w-3 h-3" />}
+                            {p.status}
+                          </span>
+                          {p.failure_reason && <p className="text-xs text-destructive mt-1">{p.failure_reason}</p>}
+                        </td>
+                        <td className="p-4 text-sm hidden md:table-cell">{p.scheduled_date}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <div className="p-12 text-center text-muted-foreground">
+                <CreditCard className="w-10 h-10 mx-auto mb-3 opacity-40" />
+                <p className="font-medium">No payments yet</p>
               </div>
             )}
           </div>
@@ -267,11 +425,19 @@ const AdminPanel = () => {
             </div>
 
             <div className="card-elevated p-6">
+              <h2 className="text-lg font-semibold mb-4">Webhook URL</h2>
+              <div className="bg-muted/50 rounded-lg p-4">
+                <p className="text-sm font-mono break-all">https://rqyomobgjedzqjbxdzbw.supabase.co/functions/v1/flutterwave-webhook</p>
+                <p className="text-xs text-muted-foreground mt-2">Set this URL in your Flutterwave dashboard under Settings → Webhooks to automatically credit user wallets when they receive payments.</p>
+              </div>
+            </div>
+
+            <div className="card-elevated p-6">
               <h2 className="text-lg font-semibold mb-4">Terms & Conditions</h2>
               <textarea
                 rows={8}
                 className="input-field w-full"
-                defaultValue={`PaySwift Terms & Conditions\n\n1. PaySwift is a payment processing platform. We do not hold your funds.\n2. All payments are processed through Flutterwave's secure infrastructure.\n3. A transaction fee of 0.3% (capped at ₦1,000) applies to all transfers.\n4. Users must provide a valid BVN for identity verification.\n5. All transfers carry the registered business name.\n6. Scheduled payments are deducted from wallet balance first, then from tokenized cards.\n7. PaySwift is not a bank and does not offer banking services.`}
+                defaultValue={`PaySwift Terms & Conditions\n\n1. PaySwift is a payment processing platform. We do not hold your funds.\n2. All payments are processed through Flutterwave's secure infrastructure.\n3. A transaction fee of 0.3% (capped at ₦1,000) applies to all transfers.\n4. Users must provide a valid BVN for identity verification.\n5. All transfers carry the registered business name.\n6. Once a virtual account is created, your business name cannot be changed.\n7. Scheduled payments are deducted from wallet balance first, then from tokenized cards.\n8. PaySwift is not a bank and does not offer banking services.`}
               />
             </div>
           </div>
