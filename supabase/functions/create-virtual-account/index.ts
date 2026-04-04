@@ -51,9 +51,15 @@ serve(async (req) => {
       );
     }
 
-    const txRef = `PSW-${user.id.slice(0, 8)}-${Date.now()}`;
-    const narration = profile?.business_name || "PaySwift Account";
+    const txRef = `DXW-${user.id.slice(0, 8)}-${Date.now()}`;
+    
+    // Use user's actual first and last name for the static VA
+    const firstName = profile?.first_name || user.user_metadata?.first_name || "";
+    const lastName = profile?.last_name || user.user_metadata?.last_name || "";
+    const narration = profile?.business_name || "Doxawise Account";
+    const bvn = profile?.bvn || "";
 
+    // Create static virtual account with user's own name
     const flwRes = await fetch("https://api.flutterwave.com/v3/virtual-account-numbers", {
       method: "POST",
       headers: {
@@ -63,12 +69,12 @@ serve(async (req) => {
       body: JSON.stringify({
         email: user.email,
         is_permanent: true,
-        bvn: profile?.bvn || "",
+        bvn: bvn,
         tx_ref: txRef,
         phonenumber: profile?.phone || "",
-        firstname: profile?.first_name || user.user_metadata?.first_name || "",
-        lastname: profile?.last_name || user.user_metadata?.last_name || "",
-        narration,
+        firstname: firstName,
+        lastname: lastName,
+        narration: narration,
       }),
     });
 
@@ -90,7 +96,7 @@ serve(async (req) => {
       return new Response(
         JSON.stringify({
           success: true,
-          message: "Virtual account created",
+          message: "Virtual account created with your name",
           data: {
             account_number: flwData.data.account_number,
             bank_name: flwData.data.bank_name,

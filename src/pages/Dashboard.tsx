@@ -140,7 +140,7 @@ const Dashboard = () => {
               <Shield className="w-5 h-5 text-[hsl(var(--warning))] shrink-0" />
               <div>
                 <p className="font-medium text-sm">BVN Not Verified</p>
-                <p className="text-xs text-muted-foreground">Verify your BVN to enable transfers and virtual account creation</p>
+                <p className="text-xs text-muted-foreground">Verify your BVN to remove the ₦50,000 transfer limit. You can still make transfers without BVN.</p>
               </div>
             </div>
             <button onClick={handleVerifyBvn} disabled={verifyingBvn} className="btn-primary px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 shrink-0">
