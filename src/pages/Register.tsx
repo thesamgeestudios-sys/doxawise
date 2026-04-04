@@ -30,7 +30,7 @@ const Register = () => {
       toast.error('Passwords do not match');
       return;
     }
-    if (form.bvn.length !== 11 || !/^\d+$/.test(form.bvn)) {
+    if (form.bvn && (form.bvn.length !== 11 || !/^\d+$/.test(form.bvn))) {
       toast.error('BVN must be exactly 11 digits');
       return;
     }
