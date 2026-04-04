@@ -256,6 +256,60 @@ export type Database = {
         }
         Relationships: []
       }
+      virtual_cards: {
+        Row: {
+          amount: number | null
+          card_id: string
+          card_pan: string | null
+          card_type: string | null
+          created_at: string
+          currency: string | null
+          cvv: string | null
+          expiration: string | null
+          flutterwave_ref: string | null
+          id: string
+          masked_pan: string | null
+          name_on_card: string | null
+          status: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          amount?: number | null
+          card_id: string
+          card_pan?: string | null
+          card_type?: string | null
+          created_at?: string
+          currency?: string | null
+          cvv?: string | null
+          expiration?: string | null
+          flutterwave_ref?: string | null
+          id?: string
+          masked_pan?: string | null
+          name_on_card?: string | null
+          status?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          amount?: number | null
+          card_id?: string
+          card_pan?: string | null
+          card_type?: string | null
+          created_at?: string
+          currency?: string | null
+          cvv?: string | null
+          expiration?: string | null
+          flutterwave_ref?: string | null
+          id?: string
+          masked_pan?: string | null
+          name_on_card?: string | null
+          status?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
