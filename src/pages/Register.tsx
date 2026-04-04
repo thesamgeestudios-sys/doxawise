@@ -126,9 +126,9 @@ const Register = () => {
             </div>
 
             <div>
-              <label className="block text-sm font-medium mb-2">BVN (Bank Verification Number)</label>
-              <input value={form.bvn} onChange={update('bvn')} required maxLength={11} placeholder="11-digit BVN" className="input-field w-full" />
-              <p className="text-xs text-muted-foreground mt-1">Your BVN will be verified during registration</p>
+              <label className="block text-sm font-medium mb-2">BVN (Bank Verification Number) — optional</label>
+              <input value={form.bvn} onChange={update('bvn')} maxLength={11} placeholder="11-digit BVN (optional)" className="input-field w-full" />
+              <p className="text-xs text-muted-foreground mt-1">Without BVN, transfers are limited to ₦50,000. You can verify later.</p>
             </div>
 
             <div>
