@@ -60,6 +60,32 @@ export const flutterwaveApi = {
     otp?: string;
   }) => callEdgeFunction("tokenize-card", params),
 
+  // Virtual card operations
+  createVirtualCard: (params: { amount?: number; currency?: string }) =>
+    callEdgeFunction("create-virtual-card", { action: "create", ...params }),
+
+  fundVirtualCard: (card_id: string, amount: number) =>
+    callEdgeFunction("create-virtual-card", { action: "fund", card_id, amount }),
+
+  blockVirtualCard: (card_id: string) =>
+    callEdgeFunction("create-virtual-card", { action: "block", card_id }),
+
+  unblockVirtualCard: (card_id: string) =>
+    callEdgeFunction("create-virtual-card", { action: "unblock", card_id }),
+
+  terminateVirtualCard: (card_id: string) =>
+    callEdgeFunction("create-virtual-card", { action: "terminate", card_id }),
+
+  listVirtualCards: () =>
+    callEdgeFunction("create-virtual-card", { action: "list" }),
+
+  // Admin actions
+  adminDeleteUser: (target_user_id: string) =>
+    callEdgeFunction("admin-actions", { action: "delete_user", target_user_id }),
+
+  adminUpdateUser: (target_user_id: string, updates: Record<string, unknown>) =>
+    callEdgeFunction("admin-actions", { action: "update_user", target_user_id, updates }),
+
   getBanks: async () => {
     const res = await fetch(
       `https://${PROJECT_ID}.supabase.co/functions/v1/get-banks`,
