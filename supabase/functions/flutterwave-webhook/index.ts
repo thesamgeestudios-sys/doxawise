@@ -3,7 +3,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, verif-hash",
 };
 
 serve(async (req) => {
@@ -13,12 +13,12 @@ serve(async (req) => {
     const FLW_SECRET_KEY = Deno.env.get("FLW_SECRET_KEY");
     if (!FLW_SECRET_KEY) throw new Error("FLW_SECRET_KEY not configured");
 
-    // Verify webhook hash
+    // Verify webhook hash - use dedicated FLW_WEBHOOK_HASH or fallback to secret key
     const secretHash = req.headers.get("verif-hash");
     const expectedHash = Deno.env.get("FLW_WEBHOOK_HASH") || FLW_SECRET_KEY;
     
-    if (secretHash !== expectedHash) {
-      console.log("Invalid webhook hash");
+    if (!secretHash || secretHash !== expectedHash) {
+      console.log("Invalid webhook hash. Received:", secretHash, "Expected:", expectedHash?.slice(0, 10) + "...");
       return new Response(JSON.stringify({ status: "invalid hash" }), {
         status: 401,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -26,10 +26,15 @@ serve(async (req) => {
     }
 
     const payload = await req.json();
-    console.log("Webhook payload:", JSON.stringify(payload));
+    console.log("Webhook event:", payload.event, "Data ID:", payload.data?.id);
+
+    const adminClient = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+    );
 
     if (payload.event === "charge.completed" && payload.data?.status === "successful") {
-      const { tx_ref, amount, currency, id: txId } = payload.data;
+      const { tx_ref, amount, id: txId } = payload.data;
 
       // Verify transaction with Flutterwave
       const verifyRes = await fetch(`https://api.flutterwave.com/v3/transactions/${txId}/verify`, {
@@ -38,7 +43,7 @@ serve(async (req) => {
       const verifyData = await verifyRes.json();
 
       if (verifyData.status !== "success" || verifyData.data?.status !== "successful") {
-        console.log("Transaction verification failed:", verifyData);
+        console.log("Transaction verification failed:", JSON.stringify(verifyData));
         return new Response(JSON.stringify({ status: "verification failed" }), {
           status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
@@ -53,50 +58,64 @@ serve(async (req) => {
         });
       }
 
-      const adminClient = createClient(
-        Deno.env.get("SUPABASE_URL")!,
-        Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
-      );
+      // Try multiple matching strategies
+      let profile = null;
 
-      // Find user by virtual account ref
-      const { data: profile } = await adminClient
-        .from("profiles")
-        .select("*")
-        .or(`virtual_account_ref.eq.${tx_ref},virtual_account_number.eq.${payload.data?.account_number || ''}`)
-        .limit(1)
-        .single();
+      // 1. Match by tx_ref (virtual account ref)
+      if (tx_ref) {
+        const { data } = await adminClient
+          .from("profiles")
+          .select("*")
+          .eq("virtual_account_ref", tx_ref)
+          .single();
+        if (data) profile = data;
+      }
 
+      // 2. Match by virtual account number
       if (!profile) {
-        // Try matching by virtual_account_number from meta
         const acctNumber = payload.data?.virtual_account_number || payload.data?.account_number;
         if (acctNumber) {
-          const { data: profileByAcct } = await adminClient
+          const { data } = await adminClient
             .from("profiles")
             .select("*")
             .eq("virtual_account_number", acctNumber)
             .single();
-          
-          if (profileByAcct) {
-            const newBalance = (profileByAcct.wallet_balance || 0) + verifiedAmount;
-            await adminClient.from("profiles").update({ wallet_balance: newBalance }).eq("user_id", profileByAcct.user_id);
-            await adminClient.from("transactions").insert({
-              user_id: profileByAcct.user_id,
-              type: "credit",
-              amount: verifiedAmount,
-              description: `Virtual account deposit via ${payload.data?.payment_type || 'transfer'}`,
-              reference: `FLW-${txId}`,
-              balance_after: newBalance,
-            });
-            
-            return new Response(JSON.stringify({ status: "success" }), {
-              headers: { ...corsHeaders, "Content-Type": "application/json" },
-            });
-          }
+          if (data) profile = data;
         }
-        
+      }
+
+      // 3. Match by customer email
+      if (!profile && verifyData.data?.customer?.email) {
+        const { data: authUsers } = await adminClient.auth.admin.listUsers();
+        const matchedUser = authUsers?.users?.find(u => u.email === verifyData.data.customer.email);
+        if (matchedUser) {
+          const { data } = await adminClient
+            .from("profiles")
+            .select("*")
+            .eq("user_id", matchedUser.id)
+            .single();
+          if (data) profile = data;
+        }
+      }
+
+      if (!profile) {
         console.log("No matching profile found for tx_ref:", tx_ref);
         return new Response(JSON.stringify({ status: "no matching user" }), {
           status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      // Check for duplicate transaction
+      const { data: existingTx } = await adminClient
+        .from("transactions")
+        .select("id")
+        .eq("reference", `FLW-${txId}`)
+        .single();
+
+      if (existingTx) {
+        console.log("Duplicate transaction:", txId);
+        return new Response(JSON.stringify({ status: "duplicate" }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
 
@@ -109,10 +128,12 @@ serve(async (req) => {
         user_id: profile.user_id,
         type: "credit",
         amount: verifiedAmount,
-        description: `Virtual account deposit via ${payload.data?.payment_type || 'transfer'}`,
+        description: `Deposit via ${payload.data?.payment_type || 'bank transfer'}`,
         reference: `FLW-${txId}`,
         balance_after: newBalance,
       });
+
+      console.log(`Credited ${verifiedAmount} to user ${profile.user_id}. New balance: ${newBalance}`);
 
       return new Response(JSON.stringify({ status: "success" }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
