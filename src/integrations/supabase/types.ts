@@ -14,9 +14,40 @@ export type Database = {
   }
   public: {
     Tables: {
+      admin_messages: {
+        Row: {
+          created_at: string
+          id: string
+          is_broadcast: boolean
+          is_read: boolean
+          message: string
+          recipient_user_id: string | null
+          subject: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_broadcast?: boolean
+          is_read?: boolean
+          message: string
+          recipient_user_id?: string | null
+          subject: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_broadcast?: boolean
+          is_read?: boolean
+          message?: string
+          recipient_user_id?: string | null
+          subject?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           account_type: string
+          avatar_url: string | null
           business_name: string
           business_name_locked: boolean
           bvn: string | null
@@ -36,6 +67,7 @@ export type Database = {
         }
         Insert: {
           account_type?: string
+          avatar_url?: string | null
           business_name: string
           business_name_locked?: boolean
           bvn?: string | null
@@ -55,6 +87,7 @@ export type Database = {
         }
         Update: {
           account_type?: string
+          avatar_url?: string | null
           business_name?: string
           business_name_locked?: boolean
           bvn?: string | null
@@ -167,6 +200,39 @@ export type Database = {
           is_active?: boolean | null
           pay_day?: number
           salary?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      support_tickets: {
+        Row: {
+          admin_reply: string | null
+          created_at: string
+          id: string
+          message: string
+          status: string
+          subject: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          admin_reply?: string | null
+          created_at?: string
+          id?: string
+          message: string
+          status?: string
+          subject: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          admin_reply?: string | null
+          created_at?: string
+          id?: string
+          message?: string
+          status?: string
+          subject?: string
           updated_at?: string
           user_id?: string
         }
