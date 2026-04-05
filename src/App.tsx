@@ -15,6 +15,7 @@ import Transactions from "./pages/Transactions";
 import UserSettings from "./pages/UserSettings";
 import Admin from "./pages/Admin";
 import Terms from "./pages/Terms";
+import EmailConfirmed from "./pages/EmailConfirmed";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -30,6 +31,7 @@ const App = () => (
             <Route path="/" element={<Index />} />
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
+            <Route path="/email-confirmed" element={<EmailConfirmed />} />
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/dashboard/staff" element={<Staff />} />
             <Route path="/dashboard/payments" element={<Payments />} />

@@ -3,7 +3,7 @@ import DashboardLayout from '@/components/DashboardLayout';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { flutterwaveApi } from '@/lib/flutterwave';
-import { CreditCard, Plus, Loader2, Shield, Eye, EyeOff, Wallet, Ban, Play, Trash2, DollarSign } from 'lucide-react';
+import { CreditCard, Plus, Loader2, Shield, Eye, EyeOff, Ban, Play, Trash2, DollarSign, Banknote } from 'lucide-react';
 import { toast } from 'sonner';
 import { formatNaira } from '@/lib/constants';
 
@@ -35,29 +35,23 @@ const Cards = () => {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'virtual' | 'tokenized'>('virtual');
   
-  // Virtual card creation
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [creatingCard, setCreatingCard] = useState(false);
   const [fundAmount, setFundAmount] = useState('');
+  const [cardCurrency, setCardCurrency] = useState<'NGN' | 'USD'>('NGN');
   
-  // Fund modal
   const [fundingCard, setFundingCard] = useState<string | null>(null);
   const [fundingAmount, setFundingAmount] = useState('');
   const [processingFund, setProcessingFund] = useState(false);
-  
-  // Reveal CVV
   const [revealedCvv, setRevealedCvv] = useState<Set<string>>(new Set());
   
-  // Tokenized card
   const [showAddTokenized, setShowAddTokenized] = useState(false);
   const [step, setStep] = useState<'form' | 'otp'>('form');
   const [saving, setSaving] = useState(false);
   const [flwRef, setFlwRef] = useState('');
   const [cardForm, setCardForm] = useState({ card_number: '', cvv: '', expiry_month: '', expiry_year: '', otp: '' });
 
-  useEffect(() => {
-    if (user) loadAllCards();
-  }, [user]);
+  useEffect(() => { if (user) loadAllCards(); }, [user]);
 
   const loadAllCards = async () => {
     setLoading(true);
@@ -75,15 +69,15 @@ const Cards = () => {
     try {
       const result = await flutterwaveApi.createVirtualCard({
         amount: parseFloat(fundAmount) || 0,
-        currency: 'NGN',
+        currency: cardCurrency,
       });
       if (result.success) {
-        toast.success('Virtual card created!');
+        toast.success(`${cardCurrency} virtual card created!`);
         setShowCreateModal(false);
         setFundAmount('');
         loadAllCards();
       } else {
-        toast.error(result.message || 'Failed to create virtual card');
+        toast.error(result.message || result.details || 'Failed to create virtual card');
       }
     } catch (err: any) {
       toast.error(err.message);
@@ -96,88 +90,47 @@ const Cards = () => {
     setProcessingFund(true);
     try {
       const result = await flutterwaveApi.fundVirtualCard(fundingCard, parseFloat(fundingAmount));
-      if (result.success) {
-        toast.success('Card funded!');
-        setFundingCard(null);
-        setFundingAmount('');
-        loadAllCards();
-      } else {
-        toast.error(result.message || 'Failed to fund card');
-      }
-    } catch (err: any) {
-      toast.error(err.message);
-    }
+      if (result.success) { toast.success('Card funded!'); setFundingCard(null); setFundingAmount(''); loadAllCards(); }
+      else toast.error(result.message || 'Failed to fund card');
+    } catch (err: any) { toast.error(err.message); }
     setProcessingFund(false);
   };
 
   const handleBlockCard = async (cardId: string, currentStatus: string) => {
     try {
-      const result = currentStatus === 'active'
-        ? await flutterwaveApi.blockVirtualCard(cardId)
-        : await flutterwaveApi.unblockVirtualCard(cardId);
-      if (result.success) {
-        toast.success(`Card ${currentStatus === 'active' ? 'blocked' : 'unblocked'}`);
-        loadAllCards();
-      } else {
-        toast.error(result.message || 'Action failed');
-      }
-    } catch (err: any) {
-      toast.error(err.message);
-    }
+      const result = currentStatus === 'active' ? await flutterwaveApi.blockVirtualCard(cardId) : await flutterwaveApi.unblockVirtualCard(cardId);
+      if (result.success) { toast.success(`Card ${currentStatus === 'active' ? 'blocked' : 'unblocked'}`); loadAllCards(); }
+      else toast.error(result.message || 'Action failed');
+    } catch (err: any) { toast.error(err.message); }
   };
 
   const handleTerminateCard = async (cardId: string) => {
     if (!confirm('Are you sure? This action is irreversible.')) return;
     try {
       const result = await flutterwaveApi.terminateVirtualCard(cardId);
-      if (result.success) {
-        toast.success('Card terminated');
-        loadAllCards();
-      } else {
-        toast.error(result.message || 'Failed to terminate');
-      }
-    } catch (err: any) {
-      toast.error(err.message);
-    }
+      if (result.success) { toast.success('Card terminated'); loadAllCards(); }
+      else toast.error(result.message || 'Failed to terminate');
+    } catch (err: any) { toast.error(err.message); }
   };
 
   const toggleCvv = (id: string) => {
-    setRevealedCvv(prev => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id); else next.add(id);
-      return next;
-    });
+    setRevealedCvv(prev => { const next = new Set(prev); if (next.has(id)) next.delete(id); else next.add(id); return next; });
   };
 
-  // Tokenized card handlers
   const handleInitialize = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
     try {
       const result = await flutterwaveApi.tokenizeCard({
-        action: 'initialize',
-        card_number: cardForm.card_number.replace(/\s/g, ''),
-        cvv: cardForm.cvv,
-        expiry_month: cardForm.expiry_month,
-        expiry_year: cardForm.expiry_year,
-        amount: 50,
+        action: 'initialize', card_number: cardForm.card_number.replace(/\s/g, ''),
+        cvv: cardForm.cvv, expiry_month: cardForm.expiry_month, expiry_year: cardForm.expiry_year, amount: 50,
       });
       if (result.success && result.data) {
-        if (result.meta?.authorization?.mode === 'otp' || result.data.chargeResponseCode === '02') {
-          setFlwRef(result.data.flw_ref);
-          setStep('otp');
-          toast.info('Enter the OTP sent to your phone/email');
-        } else {
-          setFlwRef(result.data.flw_ref || '');
-          setStep('otp');
-          toast.info('Enter OTP to complete verification');
-        }
-      } else {
-        toast.error(result.message || 'Card charge failed');
-      }
-    } catch (err: any) {
-      toast.error(err.message);
-    }
+        setFlwRef(result.data.flw_ref || '');
+        setStep('otp');
+        toast.info('Enter the OTP sent to your phone/email');
+      } else toast.error(result.message || 'Card charge failed');
+    } catch (err: any) { toast.error(err.message); }
     setSaving(false);
   };
 
@@ -185,30 +138,14 @@ const Cards = () => {
     e.preventDefault();
     setSaving(true);
     try {
-      const result = await flutterwaveApi.tokenizeCard({
-        action: 'validate',
-        flw_ref: flwRef,
-        otp: cardForm.otp,
-      });
-      if (result.success) {
-        toast.success('Card added!');
-        setShowAddTokenized(false);
-        resetTokenizedForm();
-        loadAllCards();
-      } else {
-        toast.error(result.message || 'OTP validation failed');
-      }
-    } catch (err: any) {
-      toast.error(err.message);
-    }
+      const result = await flutterwaveApi.tokenizeCard({ action: 'validate', flw_ref: flwRef, otp: cardForm.otp });
+      if (result.success) { toast.success('Card added!'); setShowAddTokenized(false); resetTokenizedForm(); loadAllCards(); }
+      else toast.error(result.message || 'OTP validation failed');
+    } catch (err: any) { toast.error(err.message); }
     setSaving(false);
   };
 
-  const resetTokenizedForm = () => {
-    setCardForm({ card_number: '', cvv: '', expiry_month: '', expiry_year: '', otp: '' });
-    setStep('form');
-    setFlwRef('');
-  };
+  const resetTokenizedForm = () => { setCardForm({ card_number: '', cvv: '', expiry_month: '', expiry_year: '', otp: '' }); setStep('form'); setFlwRef(''); };
 
   const removeTokenizedCard = async (id: string) => {
     const { error } = await supabase.from('tokenized_cards').delete().eq('id', id);
@@ -229,6 +166,8 @@ const Cards = () => {
     return 'bg-muted text-muted-foreground';
   };
 
+  const currencySymbol = (c: string) => c === 'USD' ? '$' : '₦';
+
   return (
     <DashboardLayout>
       <div className="space-y-6">
@@ -239,7 +178,6 @@ const Cards = () => {
           </div>
         </div>
 
-        {/* Tabs */}
         <div className="flex bg-muted rounded-lg p-0.5 w-fit section-reveal stagger-1">
           <button onClick={() => setActiveTab('virtual')} className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${activeTab === 'virtual' ? 'bg-card shadow-sm text-foreground' : 'text-muted-foreground'}`}>
             Virtual Cards
@@ -262,22 +200,23 @@ const Cards = () => {
             <div className="bg-primary/5 border border-primary/20 rounded-xl p-4 text-sm flex items-start gap-3">
               <Shield className="w-5 h-5 text-primary mt-0.5 shrink-0" />
               <div>
-                <p className="font-medium mb-1">Flutterwave Virtual Cards</p>
-                <p className="text-muted-foreground">Create NGN virtual cards for online payments. Fund them from your wallet and use them anywhere Visa/Mastercard is accepted.</p>
+                <p className="font-medium mb-1">Virtual Cards</p>
+                <p className="text-muted-foreground">Create NGN or USD virtual cards for online payments. Fund them from your wallet. <strong>Note:</strong> IP whitelisting may be required in your payment provider dashboard for virtual card creation.</p>
               </div>
             </div>
 
             {virtualCards.length > 0 ? (
               <div className="grid gap-4 sm:grid-cols-2">
                 {virtualCards.map(card => (
-                  <div key={card.id} className="card-elevated p-5 relative overflow-hidden">
+                  <div key={card.id} className={`card-elevated p-5 relative overflow-hidden ${card.currency === 'USD' ? 'border-l-4 border-l-[hsl(var(--info))]' : 'border-l-4 border-l-[hsl(var(--success))]'}`}>
                     <div className="absolute top-0 right-0 w-32 h-32 rounded-full bg-primary/5 -translate-y-1/2 translate-x-1/4" />
                     <div className="relative z-10">
                       <div className="flex items-center justify-between mb-3">
-                        <CreditCard className="w-8 h-8 text-primary" />
-                        <span className={`text-xs font-medium px-2.5 py-1 rounded-full capitalize ${statusColor(card.status)}`}>
-                          {card.status}
-                        </span>
+                        <div className="flex items-center gap-2">
+                          <CreditCard className="w-8 h-8 text-primary" />
+                          <span className="text-xs font-bold px-2 py-0.5 rounded bg-muted">{card.currency}</span>
+                        </div>
+                        <span className={`text-xs font-medium px-2.5 py-1 rounded-full capitalize ${statusColor(card.status)}`}>{card.status}</span>
                       </div>
                       <p className="font-mono text-lg font-bold tracking-wider mb-1">{card.masked_pan}</p>
                       <p className="text-sm text-muted-foreground">{card.name_on_card}</p>
@@ -295,19 +234,15 @@ const Cards = () => {
                         </div>
                         <div className="ml-auto text-right">
                           <p className="text-xs text-muted-foreground">Balance</p>
-                          <p className="font-bold text-primary">{formatNaira(card.amount)}</p>
+                          <p className="font-bold text-primary">{currencySymbol(card.currency)}{card.amount?.toLocaleString()}</p>
                         </div>
                       </div>
                       <div className="flex gap-2 mt-4 pt-3 border-t">
-                        <button onClick={() => setFundingCard(card.card_id)} className="text-xs font-medium text-primary hover:underline flex items-center gap-1">
-                          <DollarSign className="w-3 h-3" /> Fund
-                        </button>
+                        <button onClick={() => setFundingCard(card.card_id)} className="text-xs font-medium text-primary hover:underline flex items-center gap-1"><DollarSign className="w-3 h-3" /> Fund</button>
                         <button onClick={() => handleBlockCard(card.card_id, card.status)} className="text-xs font-medium text-[hsl(var(--warning))] hover:underline flex items-center gap-1">
                           {card.status === 'active' ? <><Ban className="w-3 h-3" /> Block</> : <><Play className="w-3 h-3" /> Unblock</>}
                         </button>
-                        <button onClick={() => handleTerminateCard(card.card_id)} className="text-xs font-medium text-destructive hover:underline ml-auto flex items-center gap-1">
-                          <Trash2 className="w-3 h-3" /> Terminate
-                        </button>
+                        <button onClick={() => handleTerminateCard(card.card_id)} className="text-xs font-medium text-destructive hover:underline ml-auto flex items-center gap-1"><Trash2 className="w-3 h-3" /> Terminate</button>
                       </div>
                     </div>
                   </div>
@@ -328,7 +263,6 @@ const Cards = () => {
                 <Plus className="w-4 h-4" /> Add Card
               </button>
             </div>
-
             {tokenizedCards.length > 0 ? (
               <div className="grid gap-4 sm:grid-cols-2">
                 {tokenizedCards.map(card => (
@@ -354,21 +288,38 @@ const Cards = () => {
           </div>
         )}
 
-        {/* Create Virtual Card Modal */}
+        {/* Create Virtual Card Modal with Currency Selection */}
         {showCreateModal && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-foreground/40" onClick={() => setShowCreateModal(false)}>
             <div className="bg-card rounded-2xl shadow-xl w-full max-w-md p-6 section-reveal" onClick={e => e.stopPropagation()}>
               <h2 className="text-xl font-bold mb-6">Create Virtual Card</h2>
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium mb-1.5">Initial Fund Amount (₦) — optional</label>
+                  <label className="block text-sm font-medium mb-2">Card Currency</label>
+                  <div className="grid grid-cols-2 gap-3">
+                    <button type="button" onClick={() => setCardCurrency('NGN')}
+                      className={`p-4 rounded-xl border-2 text-center transition-all ${cardCurrency === 'NGN' ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/30'}`}>
+                      <Banknote className="w-8 h-8 mx-auto mb-2 text-[hsl(var(--success))]" />
+                      <p className="font-semibold">Naira (₦)</p>
+                      <p className="text-xs text-muted-foreground mt-1">Nigerian Naira card</p>
+                    </button>
+                    <button type="button" onClick={() => setCardCurrency('USD')}
+                      className={`p-4 rounded-xl border-2 text-center transition-all ${cardCurrency === 'USD' ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/30'}`}>
+                      <DollarSign className="w-8 h-8 mx-auto mb-2 text-[hsl(var(--info))]" />
+                      <p className="font-semibold">Dollar ($)</p>
+                      <p className="text-xs text-muted-foreground mt-1">US Dollar card</p>
+                    </button>
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1.5">Initial Fund Amount ({currencySymbol(cardCurrency)}) — optional</label>
                   <input type="number" value={fundAmount} onChange={e => setFundAmount(e.target.value)} className="input-field w-full" placeholder="0" min={0} />
-                  <p className="text-xs text-muted-foreground mt-1">You can fund the card later as well.</p>
+                  <p className="text-xs text-muted-foreground mt-1">You can fund the card later as well. Funds are deducted from your wallet.</p>
                 </div>
                 <div className="flex gap-3 pt-2">
                   <button onClick={() => setShowCreateModal(false)} className="flex-1 py-2.5 rounded-lg border text-sm font-medium hover:bg-muted transition-colors">Cancel</button>
                   <button onClick={handleCreateVirtualCard} disabled={creatingCard} className="flex-1 btn-primary py-2.5 rounded-lg text-sm font-medium flex items-center justify-center gap-2">
-                    {creatingCard ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Create Card'}
+                    {creatingCard ? <Loader2 className="w-4 h-4 animate-spin" /> : `Create ${cardCurrency} Card`}
                   </button>
                 </div>
               </div>
@@ -401,44 +352,43 @@ const Cards = () => {
         {showAddTokenized && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-foreground/40" onClick={() => setShowAddTokenized(false)}>
             <div className="bg-card rounded-2xl shadow-xl w-full max-w-md p-6 section-reveal" onClick={e => e.stopPropagation()}>
-              <h2 className="text-xl font-bold mb-6">{step === 'form' ? 'Add Card' : 'Verify OTP'}</h2>
+              <h2 className="text-xl font-bold mb-6">{step === 'form' ? 'Add Payment Card' : 'Enter OTP'}</h2>
               {step === 'form' ? (
                 <form onSubmit={handleInitialize} className="space-y-4">
                   <div>
                     <label className="block text-sm font-medium mb-1.5">Card Number</label>
-                    <input value={cardForm.card_number} onChange={e => setCardForm(p => ({ ...p, card_number: e.target.value }))} required maxLength={19} placeholder="5531 8866 5214 2950" className="input-field w-full font-mono" />
+                    <input value={cardForm.card_number} onChange={e => setCardForm(p => ({ ...p, card_number: e.target.value }))} required maxLength={19} className="input-field w-full" placeholder="5399 8383 8383 8381" />
                   </div>
-                  <div className="grid grid-cols-3 gap-4">
+                  <div className="grid grid-cols-3 gap-3">
                     <div>
                       <label className="block text-sm font-medium mb-1.5">Month</label>
-                      <input value={cardForm.expiry_month} onChange={e => setCardForm(p => ({ ...p, expiry_month: e.target.value }))} required maxLength={2} placeholder="09" className="input-field w-full" />
+                      <input value={cardForm.expiry_month} onChange={e => setCardForm(p => ({ ...p, expiry_month: e.target.value }))} required maxLength={2} className="input-field w-full" placeholder="09" />
                     </div>
                     <div>
                       <label className="block text-sm font-medium mb-1.5">Year</label>
-                      <input value={cardForm.expiry_year} onChange={e => setCardForm(p => ({ ...p, expiry_year: e.target.value }))} required maxLength={2} placeholder="32" className="input-field w-full" />
+                      <input value={cardForm.expiry_year} onChange={e => setCardForm(p => ({ ...p, expiry_year: e.target.value }))} required maxLength={2} className="input-field w-full" placeholder="32" />
                     </div>
                     <div>
                       <label className="block text-sm font-medium mb-1.5">CVV</label>
-                      <input type="password" value={cardForm.cvv} onChange={e => setCardForm(p => ({ ...p, cvv: e.target.value }))} required maxLength={4} placeholder="•••" className="input-field w-full" />
+                      <input value={cardForm.cvv} onChange={e => setCardForm(p => ({ ...p, cvv: e.target.value }))} required maxLength={4} className="input-field w-full" placeholder="470" />
                     </div>
                   </div>
-                  <p className="text-xs text-muted-foreground">A ₦50 verification charge will be applied.</p>
+                  <p className="text-xs text-muted-foreground">A ₦50 verification charge will be applied and refunded.</p>
                   <div className="flex gap-3 pt-2">
-                    <button type="button" onClick={() => setShowAddTokenized(false)} className="flex-1 py-2.5 rounded-lg border text-sm font-medium hover:bg-muted transition-colors">Cancel</button>
+                    <button type="button" onClick={() => setShowAddTokenized(false)} className="flex-1 py-2.5 rounded-lg border text-sm font-medium hover:bg-muted">Cancel</button>
                     <button type="submit" disabled={saving} className="flex-1 btn-primary py-2.5 rounded-lg text-sm font-medium flex items-center justify-center gap-2">
-                      {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Tokenize Card'}
+                      {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Continue'}
                     </button>
                   </div>
                 </form>
               ) : (
                 <form onSubmit={handleValidateOtp} className="space-y-4">
-                  <p className="text-sm text-muted-foreground">Enter the OTP sent to your phone or email.</p>
                   <div>
                     <label className="block text-sm font-medium mb-1.5">OTP</label>
-                    <input value={cardForm.otp} onChange={e => setCardForm(p => ({ ...p, otp: e.target.value }))} required maxLength={6} placeholder="123456" className="input-field w-full text-center text-lg font-mono tracking-widest" />
+                    <input value={cardForm.otp} onChange={e => setCardForm(p => ({ ...p, otp: e.target.value }))} required className="input-field w-full" placeholder="123456" />
                   </div>
                   <div className="flex gap-3 pt-2">
-                    <button type="button" onClick={() => setStep('form')} className="flex-1 py-2.5 rounded-lg border text-sm font-medium hover:bg-muted transition-colors">Back</button>
+                    <button type="button" onClick={() => setStep('form')} className="flex-1 py-2.5 rounded-lg border text-sm font-medium hover:bg-muted">Back</button>
                     <button type="submit" disabled={saving} className="flex-1 btn-primary py-2.5 rounded-lg text-sm font-medium flex items-center justify-center gap-2">
                       {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Verify'}
                     </button>

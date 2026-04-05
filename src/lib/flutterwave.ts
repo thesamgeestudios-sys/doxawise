@@ -60,7 +60,6 @@ export const flutterwaveApi = {
     otp?: string;
   }) => callEdgeFunction("tokenize-card", params),
 
-  // Virtual card operations
   createVirtualCard: (params: { amount?: number; currency?: string }) =>
     callEdgeFunction("create-virtual-card", { action: "create", ...params }),
 
@@ -78,6 +77,16 @@ export const flutterwaveApi = {
 
   listVirtualCards: () =>
     callEdgeFunction("create-virtual-card", { action: "list" }),
+
+  // Support tickets
+  createSupportTicket: (subject: string, message: string) =>
+    callEdgeFunction("support-tickets", { action: "create_ticket", subject, message }),
+
+  replySupportTicket: (ticket_id: string, reply: string, status?: string) =>
+    callEdgeFunction("support-tickets", { action: "reply_ticket", ticket_id, reply, status }),
+
+  sendMessage: (params: { recipient_user_id?: string; subject: string; message: string; is_broadcast?: boolean }) =>
+    callEdgeFunction("support-tickets", { action: "send_message", ...params }),
 
   // Admin actions
   adminDeleteUser: (target_user_id: string) =>
