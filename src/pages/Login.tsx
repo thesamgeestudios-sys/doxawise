@@ -15,13 +15,38 @@ const Login = () => {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    setLoading(false);
+
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+
     if (error) {
+      setLoading(false);
       toast.error(error.message);
-    } else {
-      navigate('/dashboard');
+      return;
     }
+
+    const userId = data.user?.id;
+
+    if (userId) {
+      const { data: roles, error: roleError } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', userId)
+        .eq('role', 'admin')
+        .limit(1);
+
+      setLoading(false);
+
+      if (roleError) {
+        toast.error(roleError.message);
+        return;
+      }
+
+      navigate(roles && roles.length > 0 ? '/admin' : '/dashboard');
+      return;
+    }
+
+    setLoading(false);
+    navigate('/dashboard');
   };
 
   return (
