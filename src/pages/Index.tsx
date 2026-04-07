@@ -1,6 +1,10 @@
 import { Link } from 'react-router-dom';
 import { APP_NAME, APP_TAGLINE } from '@/lib/constants';
-import { ArrowRight, Shield, Zap, CreditCard, Users, Clock, Wallet, Globe, TrendingUp, Smartphone, Lock, CheckCircle2 } from 'lucide-react';
+import { ArrowRight, Shield, Zap, CreditCard, Users, Clock, Wallet, Globe, TrendingUp, Smartphone, Lock, CheckCircle2, Send, BarChart3 } from 'lucide-react';
+import heroBanner from '@/assets/hero-banner.jpg';
+import internationalImg from '@/assets/international-payments.jpg';
+import virtualCardImg from '@/assets/virtual-card.jpg';
+import teamImg from '@/assets/team-payments.jpg';
 
 const Index = () => {
   const features = [
@@ -8,8 +12,8 @@ const Index = () => {
     { icon: Clock, title: 'Auto Scheduling', desc: 'Set pay dates and forget. Payments run automatically every cycle.', color: 'text-[hsl(var(--warning))]', bg: 'bg-[hsl(var(--warning))]/10' },
     { icon: CreditCard, title: 'Virtual Cards', desc: 'Create virtual Naira & Dollar cards for online payments and subscriptions.', color: 'text-[hsl(var(--purple))]', bg: 'bg-[hsl(var(--purple))]/10' },
     { icon: Wallet, title: 'Virtual Account', desc: 'Get a dedicated Nigerian virtual account in your business name.', color: 'text-[hsl(var(--success))]', bg: 'bg-[hsl(var(--success))]/10' },
-    { icon: Zap, title: 'Instant Processing', desc: 'Payments processed in real-time through secure banking infrastructure.', color: 'text-primary', bg: 'bg-primary/10' },
-    { icon: Lock, title: 'Secure & Compliant', desc: 'BVN-verified accounts with bank-grade encryption and security.', color: 'text-[hsl(var(--teal))]', bg: 'bg-[hsl(var(--teal))]/10' },
+    { icon: Globe, title: 'International Payments', desc: 'Send and receive money across borders. Support for USD, GBP, EUR, and more.', color: 'text-[hsl(var(--teal))]', bg: 'bg-[hsl(var(--teal))]/10' },
+    { icon: Lock, title: 'Secure & Compliant', desc: 'BVN-verified accounts with bank-grade encryption and security.', color: 'text-primary', bg: 'bg-primary/10' },
   ];
 
   const stats = [
@@ -22,91 +26,46 @@ const Index = () => {
   return (
     <div className="min-h-screen bg-background overflow-hidden">
       {/* Navigation */}
-      <nav className="page-container flex items-center justify-between py-5 relative z-10">
-        <span className="text-xl font-bold text-primary">{APP_NAME}</span>
+      <nav className="absolute top-0 left-0 right-0 z-20 page-container flex items-center justify-between py-5">
+        <span className="text-xl font-bold text-primary-foreground drop-shadow-lg">{APP_NAME}</span>
         <div className="flex items-center gap-4">
-          <Link to="/login" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">Sign In</Link>
-          <Link to="/register" className="btn-primary px-5 py-2.5 rounded-lg text-sm font-medium inline-flex items-center gap-2">
+          <Link to="/login" className="text-sm font-medium text-primary-foreground/80 hover:text-primary-foreground transition-colors">Sign In</Link>
+          <Link to="/register" className="bg-accent text-accent-foreground px-5 py-2.5 rounded-lg text-sm font-medium inline-flex items-center gap-2 hover:opacity-90 transition-all">
             Get Started <ArrowRight className="w-4 h-4" />
           </Link>
         </div>
       </nav>
 
-      {/* Hero Section */}
-      <section className="page-container pt-12 pb-20 sm:pt-20 sm:pb-28 relative">
-        {/* Decorative elements */}
-        <div className="absolute top-0 right-0 w-96 h-96 bg-primary/5 rounded-full blur-3xl -translate-y-1/3 translate-x-1/4" />
-        <div className="absolute bottom-0 left-0 w-64 h-64 bg-[hsl(var(--purple))]/5 rounded-full blur-3xl translate-y-1/3 -translate-x-1/4" />
-        
-        <div className="relative grid lg:grid-cols-2 gap-12 items-center">
-          <div className="section-reveal">
-            <div className="inline-flex items-center gap-2 bg-primary/10 text-primary text-sm font-medium px-4 py-1.5 rounded-full mb-6">
+      {/* Hero Section - Image Led */}
+      <section className="relative min-h-[90vh] flex items-center">
+        <div className="absolute inset-0">
+          <img src={heroBanner} alt="Doxawise payment dashboard" width={1920} height={1080} className="w-full h-full object-cover" />
+          <div className="absolute inset-0 bg-gradient-to-r from-[hsl(222,62%,12%)/0.92] via-[hsl(222,62%,18%)/0.85] to-[hsl(262,60%,20%)/0.7]" />
+        </div>
+        <div className="relative z-10 page-container pt-24 pb-20">
+          <div className="max-w-2xl section-reveal">
+            <div className="inline-flex items-center gap-2 bg-accent/20 text-accent text-sm font-medium px-4 py-1.5 rounded-full mb-6 backdrop-blur-sm border border-accent/30">
               <Shield className="w-4 h-4" />
-              Secure Payment Processing
+              Nigeria's Smart Payment Platform
             </div>
-            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold leading-[1.08] mb-6">{APP_TAGLINE}</h1>
-            <p className="text-lg text-muted-foreground max-w-xl leading-relaxed mb-8">
-              Automate salary disbursement, create virtual cards, schedule payments, and manage your workforce payroll — all from one secure platform.
+            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold leading-[1.08] mb-6 text-primary-foreground">
+              {APP_TAGLINE}
+            </h1>
+            <p className="text-lg text-primary-foreground/80 max-w-xl leading-relaxed mb-8">
+              Automate salary disbursement, create virtual cards, send international payments, and manage your workforce payroll — all from one secure platform.
             </p>
             <div className="flex flex-wrap gap-4">
-              <Link to="/register" className="btn-gradient px-8 py-3.5 rounded-xl text-base font-semibold inline-flex items-center gap-2">
+              <Link to="/register" className="bg-accent text-accent-foreground px-8 py-3.5 rounded-xl text-base font-semibold inline-flex items-center gap-2 hover:opacity-90 transition-all shadow-lg">
                 Create Free Account <ArrowRight className="w-5 h-5" />
               </Link>
-              <Link to="/login" className="px-8 py-3.5 rounded-xl text-base font-medium border hover:bg-muted transition-colors">
+              <Link to="/login" className="px-8 py-3.5 rounded-xl text-base font-medium border border-primary-foreground/30 text-primary-foreground hover:bg-primary-foreground/10 transition-colors backdrop-blur-sm">
                 Sign In
               </Link>
             </div>
-            <div className="flex flex-wrap gap-x-6 gap-y-2 mt-8 text-sm text-muted-foreground">
-              <span className="flex items-center gap-1.5"><CheckCircle2 className="w-4 h-4 text-[hsl(var(--success))]" /> 0.3% fee, max ₦1,000</span>
-              <span className="flex items-center gap-1.5"><CheckCircle2 className="w-4 h-4 text-[hsl(var(--success))]" /> We never hold your money</span>
-              <span className="flex items-center gap-1.5"><CheckCircle2 className="w-4 h-4 text-[hsl(var(--success))]" /> Instant transfers</span>
-            </div>
-          </div>
-          
-          {/* Hero visual - floating cards */}
-          <div className="hidden lg:block relative section-reveal stagger-2">
-            <div className="relative w-full h-[420px]">
-              {/* Main card */}
-              <div className="absolute top-8 left-8 right-8 rounded-2xl p-6 text-primary-foreground gradient-card shadow-2xl" style={{ animation: 'float 6s ease-in-out infinite' }}>
-                <p className="text-sm opacity-80 mb-1">Virtual Account</p>
-                <p className="text-xl font-bold mb-4">Acme Nigeria Ltd</p>
-                <div className="flex items-end justify-between">
-                  <div>
-                    <p className="text-xs opacity-60">Account Number</p>
-                    <p className="text-2xl font-bold tracking-wider">7824531098</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-xs opacity-60">Balance</p>
-                    <p className="text-2xl font-bold">₦2,450,000</p>
-                  </div>
-                </div>
-              </div>
-              
-              {/* Floating card */}
-              <div className="absolute bottom-12 right-0 w-72 rounded-xl p-4 bg-card border shadow-xl" style={{ animation: 'float 6s ease-in-out 1s infinite' }}>
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-[hsl(var(--success))]/10 flex items-center justify-center">
-                    <TrendingUp className="w-5 h-5 text-[hsl(var(--success))]" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium">Payment Received</p>
-                    <p className="text-xs text-muted-foreground">+₦500,000 • Just now</p>
-                  </div>
-                </div>
-              </div>
-              
-              {/* Another floating notification */}
-              <div className="absolute bottom-0 left-0 w-64 rounded-xl p-4 bg-card border shadow-xl" style={{ animation: 'float 6s ease-in-out 2s infinite' }}>
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                    <Users className="w-5 h-5 text-primary" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium">Batch Salary Paid</p>
-                    <p className="text-xs text-muted-foreground">15 staff • ₦4.2M</p>
-                  </div>
-                </div>
-              </div>
+            <div className="flex flex-wrap gap-x-6 gap-y-2 mt-8 text-sm text-primary-foreground/70">
+              <span className="flex items-center gap-1.5"><CheckCircle2 className="w-4 h-4 text-accent" /> 0.3% fee, max ₦1,000</span>
+              <span className="flex items-center gap-1.5"><CheckCircle2 className="w-4 h-4 text-accent" /> We never hold your money</span>
+              <span className="flex items-center gap-1.5"><CheckCircle2 className="w-4 h-4 text-accent" /> Instant transfers</span>
             </div>
           </div>
         </div>
@@ -130,7 +89,7 @@ const Index = () => {
       <section className="page-container py-20 sm:py-28">
         <div className="text-center mb-16 section-reveal">
           <h2 className="text-3xl sm:text-4xl font-bold mb-4">Everything you need to process payments</h2>
-          <p className="text-lg text-muted-foreground max-w-2xl mx-auto">Powerful tools built for Nigerian businesses to automate payroll, manage funds, and scale operations.</p>
+          <p className="text-lg text-muted-foreground max-w-2xl mx-auto">Powerful tools built for Nigerian businesses to automate payroll, manage funds, and scale operations globally.</p>
         </div>
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {features.map((f, i) => (
@@ -142,6 +101,100 @@ const Index = () => {
               <p className="text-sm text-muted-foreground leading-relaxed">{f.desc}</p>
             </div>
           ))}
+        </div>
+      </section>
+
+      {/* Virtual Cards Section - Image Led */}
+      <section className="relative overflow-hidden">
+        <div className="grid lg:grid-cols-2">
+          <div className="relative h-64 lg:h-auto">
+            <img src={virtualCardImg} alt="Virtual debit card" width={1280} height={720} loading="lazy" className="w-full h-full object-cover" />
+            <div className="absolute inset-0 bg-gradient-to-r from-transparent to-background lg:to-transparent" />
+          </div>
+          <div className="flex items-center p-8 sm:p-12 lg:p-16">
+            <div className="section-reveal">
+              <div className="inline-flex items-center gap-2 badge-purple mb-4">
+                <CreditCard className="w-3.5 h-3.5" /> Virtual Cards
+              </div>
+              <h2 className="text-3xl sm:text-4xl font-bold mb-4">Create virtual cards in seconds</h2>
+              <p className="text-muted-foreground leading-relaxed mb-6">
+                Generate Naira or Dollar virtual cards instantly. Use them for online subscriptions, international purchases, and team spending management.
+              </p>
+              <ul className="space-y-3 mb-8">
+                {['NGN & USD card options', 'Fund, block & terminate anytime', 'Secure online payments'].map(item => (
+                  <li key={item} className="flex items-center gap-2 text-sm">
+                    <CheckCircle2 className="w-4 h-4 text-[hsl(var(--success))] shrink-0" /> {item}
+                  </li>
+                ))}
+              </ul>
+              <Link to="/register" className="btn-gradient px-6 py-3 rounded-xl text-sm font-semibold inline-flex items-center gap-2">
+                Get Your Card <ArrowRight className="w-4 h-4" />
+              </Link>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* International Payments - Image Led */}
+      <section className="relative overflow-hidden">
+        <div className="grid lg:grid-cols-2">
+          <div className="flex items-center p-8 sm:p-12 lg:p-16 order-2 lg:order-1">
+            <div className="section-reveal">
+              <div className="inline-flex items-center gap-2 badge-info mb-4">
+                <Globe className="w-3.5 h-3.5" /> International Payments
+              </div>
+              <h2 className="text-3xl sm:text-4xl font-bold mb-4">Send money across borders</h2>
+              <p className="text-muted-foreground leading-relaxed mb-6">
+                Transfer funds internationally with competitive exchange rates. Send money to the US, UK, Europe, and across Africa directly from your Doxawise wallet.
+              </p>
+              <ul className="space-y-3 mb-8">
+                {['Support for USD, GBP, EUR, GHS & more', 'Real-time exchange rates', 'Receive from anywhere in the world'].map(item => (
+                  <li key={item} className="flex items-center gap-2 text-sm">
+                    <CheckCircle2 className="w-4 h-4 text-[hsl(var(--success))] shrink-0" /> {item}
+                  </li>
+                ))}
+              </ul>
+              <Link to="/register" className="btn-primary px-6 py-3 rounded-xl text-sm font-semibold inline-flex items-center gap-2">
+                Start Sending <Send className="w-4 h-4" />
+              </Link>
+            </div>
+          </div>
+          <div className="relative h-64 lg:h-auto order-1 lg:order-2">
+            <img src={internationalImg} alt="International payments globe" width={1280} height={720} loading="lazy" className="w-full h-full object-cover" />
+            <div className="absolute inset-0 bg-gradient-to-l from-transparent to-background lg:to-transparent" />
+          </div>
+        </div>
+      </section>
+
+      {/* Team Payments - Image Led */}
+      <section className="relative">
+        <div className="absolute inset-0">
+          <img src={teamImg} alt="Team receiving payments" width={1280} height={720} loading="lazy" className="w-full h-full object-cover" />
+          <div className="absolute inset-0 bg-gradient-to-r from-[hsl(222,62%,10%)/0.9] to-[hsl(222,62%,10%)/0.7]" />
+        </div>
+        <div className="relative z-10 page-container py-20 sm:py-28">
+          <div className="max-w-xl section-reveal">
+            <h2 className="text-3xl sm:text-4xl font-bold mb-4 text-primary-foreground">Pay your entire team with one click</h2>
+            <p className="text-lg text-primary-foreground/80 leading-relaxed mb-8">
+              Add your staff, set their salaries and bank details, then process batch payments instantly. Everyone gets paid simultaneously.
+            </p>
+            <div className="grid grid-cols-3 gap-4 mb-8">
+              {[
+                { icon: Users, label: 'Batch Pay', value: '100+ staff' },
+                { icon: Zap, label: 'Speed', value: '<3 seconds' },
+                { icon: BarChart3, label: 'Tracking', value: 'Real-time' },
+              ].map(item => (
+                <div key={item.label} className="bg-primary-foreground/10 backdrop-blur-sm rounded-xl p-4 border border-primary-foreground/10 text-center">
+                  <item.icon className="w-5 h-5 text-accent mx-auto mb-2" />
+                  <p className="text-xs text-primary-foreground/60">{item.label}</p>
+                  <p className="text-sm font-bold text-primary-foreground">{item.value}</p>
+                </div>
+              ))}
+            </div>
+            <Link to="/register" className="bg-accent text-accent-foreground px-8 py-3.5 rounded-xl text-base font-semibold inline-flex items-center gap-2 hover:opacity-90 transition-all">
+              Start Paying Your Team <ArrowRight className="w-5 h-5" />
+            </Link>
+          </div>
         </div>
       </section>
 
@@ -175,63 +228,9 @@ const Index = () => {
         <div className="page-container py-16 sm:py-20 text-center relative z-10 section-reveal">
           <h2 className="text-2xl sm:text-3xl font-bold mb-4 text-primary-foreground">Ready to streamline your payroll?</h2>
           <p className="text-lg text-primary-foreground/80 mb-8 max-w-lg mx-auto">Join businesses across Nigeria using {APP_NAME} for automated, secure batch payment processing.</p>
-          <Link to="/register" className="bg-white text-primary px-8 py-3.5 rounded-xl text-base font-semibold inline-flex items-center gap-2 hover:bg-white/90 transition-colors">
+          <Link to="/register" className="bg-accent text-accent-foreground px-8 py-3.5 rounded-xl text-base font-semibold inline-flex items-center gap-2 hover:opacity-90 transition-all shadow-lg">
             Get Started Now <ArrowRight className="w-5 h-5" />
           </Link>
-        </div>
-      </section>
-
-      {/* Mobile app section */}
-      <section className="page-container py-20 sm:py-28">
-        <div className="grid lg:grid-cols-2 gap-12 items-center">
-          <div className="section-reveal">
-            <h2 className="text-3xl sm:text-4xl font-bold mb-6">Manage payments on the go</h2>
-            <p className="text-lg text-muted-foreground mb-8 leading-relaxed">
-              Access your {APP_NAME} dashboard from any device. Our responsive platform works perfectly on phones, tablets, and desktops.
-            </p>
-            <div className="space-y-4">
-              {[
-                { icon: Smartphone, text: 'Fully responsive on all devices' },
-                { icon: Shield, text: 'Bank-grade security & encryption' },
-                { icon: Globe, text: 'Access from anywhere in the world' },
-              ].map(item => (
-                <div key={item.text} className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-                    <item.icon className="w-5 h-5 text-primary" />
-                  </div>
-                  <p className="text-sm font-medium">{item.text}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-          <div className="hidden lg:flex justify-center section-reveal stagger-2">
-            <div className="w-72 h-[500px] rounded-3xl bg-card border-2 shadow-2xl p-3 relative">
-              <div className="w-full h-full rounded-2xl bg-muted/50 flex items-center justify-center">
-                <div className="text-center p-6">
-                  <div className="w-16 h-16 rounded-2xl gradient-card flex items-center justify-center mx-auto mb-4">
-                    <Wallet className="w-8 h-8 text-primary-foreground" />
-                  </div>
-                  <p className="font-bold text-lg">{APP_NAME}</p>
-                  <p className="text-sm text-muted-foreground mt-1">Mobile Dashboard</p>
-                  <div className="mt-6 space-y-3 text-left">
-                    <div className="bg-card rounded-lg p-3 border">
-                      <p className="text-xs text-muted-foreground">Balance</p>
-                      <p className="font-bold">₦2,450,000</p>
-                    </div>
-                    <div className="bg-card rounded-lg p-3 border flex items-center gap-2">
-                      <div className="w-6 h-6 rounded-full bg-[hsl(var(--success))]/20 flex items-center justify-center">
-                        <CheckCircle2 className="w-3 h-3 text-[hsl(var(--success))]" />
-                      </div>
-                      <div>
-                        <p className="text-xs font-medium">Salary Paid</p>
-                        <p className="text-xs text-muted-foreground">15 staff</p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
         </div>
       </section>
 
@@ -255,6 +254,7 @@ const Index = () => {
               <div className="space-y-2 text-sm text-muted-foreground">
                 <p>Batch Payments</p>
                 <p>Virtual Cards</p>
+                <p>International Transfers</p>
                 <p>Virtual Accounts</p>
               </div>
             </div>

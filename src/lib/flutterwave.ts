@@ -109,4 +109,21 @@ export const flutterwaveApi = {
 
   resolveAccount: (account_number: string, account_bank: string) =>
     callEdgeFunction("resolve-account", { account_number, account_bank }),
+
+  // International transfers
+  getTransferRates: (source_currency: string, destination_currency: string, amount: number) =>
+    callEdgeFunction("international-transfer", { action: "get_rates", source_currency, destination_currency, amount }),
+
+  getCountryBanks: (country: string) =>
+    callEdgeFunction("international-transfer", { action: "get_country_banks", country }),
+
+  internationalTransfer: (params: {
+    account_bank: string;
+    account_number: string;
+    amount: number;
+    currency: string;
+    destination_currency: string;
+    beneficiary_name?: string;
+    narration?: string;
+  }) => callEdgeFunction("international-transfer", { action: "transfer", ...params }),
 };
