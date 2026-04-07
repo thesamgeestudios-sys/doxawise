@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
@@ -7,9 +7,18 @@ import { APP_NAME, formatNaira } from '@/lib/constants';
 import {
   LayoutDashboard, Users, CreditCard, Settings, LogOut, FileText,
   TrendingUp, DollarSign, Shield, Search, Loader2, Eye, Edit2, Save, X, Ban, CheckCircle,
-  Wallet, AlertTriangle, Trash2, RefreshCw, MessageSquare, Send, Bell, HelpCircle, Mail
+  Wallet, AlertTriangle, Trash2, RefreshCw, MessageSquare, Send, Bell, HelpCircle, Mail,
+  Calendar, BarChart3, Globe, Activity, UserPlus
 } from 'lucide-react';
 import { toast } from 'sonner';
+
+// Helper to filter by date range
+function filterByDateRange(items: any[], field: string, days: number | null) {
+  if (days === null) return items;
+  const cutoff = new Date();
+  cutoff.setDate(cutoff.getDate() - days);
+  return items.filter(item => new Date(item[field]) >= cutoff);
+}
 
 const AdminPanel = () => {
   const { user } = useAuth();
@@ -23,27 +32,22 @@ const AdminPanel = () => {
   const [allPayments, setAllPayments] = useState<any[]>([]);
   const [tickets, setTickets] = useState<any[]>([]);
   const [userSearch, setUserSearch] = useState('');
-  const [totalVolume, setTotalVolume] = useState(0);
-  const [platformRevenue, setPlatformRevenue] = useState(0);
-  const [pendingVerifications, setPendingVerifications] = useState(0);
+  const [statsPeriod, setStatsPeriod] = useState<'daily' | 'weekly' | 'monthly' | 'annual' | 'all'>('all');
 
   const [editingUser, setEditingUser] = useState<any>(null);
   const [editForm, setEditForm] = useState({ bvn_verified: false, bvn: '', business_name: '', first_name: '', last_name: '', account_type: 'business', phone: '' });
   const [savingUser, setSavingUser] = useState(false);
   const [deletingUser, setDeletingUser] = useState<string | null>(null);
 
-  // Ticket reply
   const [replyingTicket, setReplyingTicket] = useState<any>(null);
   const [ticketReply, setTicketReply] = useState('');
   const [ticketStatus, setTicketStatus] = useState('open');
   const [savingReply, setSavingReply] = useState(false);
 
-  // Messaging
   const [showMessageModal, setShowMessageModal] = useState(false);
   const [messageForm, setMessageForm] = useState({ recipient_user_id: '', subject: '', message: '', is_broadcast: false });
   const [sendingMessage, setSendingMessage] = useState(false);
 
-  // View user details
   const [viewingUser, setViewingUser] = useState<any>(null);
   const [userTransactions, setUserTransactions] = useState<any[]>([]);
 
@@ -59,26 +63,67 @@ const AdminPanel = () => {
   const loadAdminData = async () => {
     const [profilesRes, txRes, paymentsRes, ticketsRes] = await Promise.all([
       supabase.from('profiles').select('*'),
-      supabase.from('transactions').select('*').order('created_at', { ascending: false }).limit(500),
-      supabase.from('scheduled_payments').select('*').order('created_at', { ascending: false }).limit(500),
+      supabase.from('transactions').select('*').order('created_at', { ascending: false }).limit(1000),
+      supabase.from('scheduled_payments').select('*').order('created_at', { ascending: false }).limit(1000),
       supabase.from('support_tickets').select('*').order('created_at', { ascending: false }),
     ]);
-    if (profilesRes.data) {
-      setProfiles(profilesRes.data);
-      setPendingVerifications(profilesRes.data.filter((p: any) => !p.bvn_verified).length);
-    }
-    if (txRes.data) {
-      setAllTransactions(txRes.data);
-      const volume = txRes.data.reduce((sum: number, t: any) => sum + Number(t.amount), 0);
-      setTotalVolume(volume);
-      const debitTxs = txRes.data.filter((t: any) => t.type === 'debit');
-      const revenue = debitTxs.reduce((sum: number, t: any) => sum + Math.min(Number(t.amount) * 0.003, 1000), 0);
-      setPlatformRevenue(revenue);
-    }
+    if (profilesRes.data) setProfiles(profilesRes.data);
+    if (txRes.data) setAllTransactions(txRes.data);
     if (paymentsRes.data) setAllPayments(paymentsRes.data);
     if (ticketsRes.data) setTickets(ticketsRes.data);
     setLoading(false);
   };
+
+  // Computed analytics
+  const periodDays = useMemo(() => {
+    switch (statsPeriod) {
+      case 'daily': return 1;
+      case 'weekly': return 7;
+      case 'monthly': return 30;
+      case 'annual': return 365;
+      default: return null;
+    }
+  }, [statsPeriod]);
+
+  const analytics = useMemo(() => {
+    const filteredTx = filterByDateRange(allTransactions, 'created_at', periodDays);
+    const filteredUsers = filterByDateRange(profiles, 'created_at', periodDays);
+    const filteredPayments = filterByDateRange(allPayments, 'created_at', periodDays);
+
+    const totalVolume = filteredTx.reduce((sum: number, t: any) => sum + Number(t.amount), 0);
+    const debitTxs = filteredTx.filter((t: any) => t.type === 'debit');
+    const creditTxs = filteredTx.filter((t: any) => t.type === 'credit');
+    const revenue = debitTxs.reduce((sum: number, t: any) => sum + Math.min(Number(t.amount) * 0.003, 1000), 0);
+    const completedPayments = filteredPayments.filter((p: any) => p.status === 'completed');
+    const failedPayments = filteredPayments.filter((p: any) => p.status === 'failed');
+    const pendingPayments = filteredPayments.filter((p: any) => p.status === 'pending');
+
+    // Daily new users (always today)
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const dailyNewUsers = profiles.filter(p => new Date(p.created_at) >= today).length;
+
+    // Users with verified BVN
+    const verifiedUsers = profiles.filter(p => p.bvn_verified).length;
+    const unverifiedUsers = profiles.length - verifiedUsers;
+
+    return {
+      totalUsers: profiles.length,
+      newUsers: filteredUsers.length,
+      dailyNewUsers,
+      totalVolume,
+      totalDebit: debitTxs.reduce((s: number, t: any) => s + Number(t.amount), 0),
+      totalCredit: creditTxs.reduce((s: number, t: any) => s + Number(t.amount), 0),
+      revenue,
+      transactionCount: filteredTx.length,
+      completedPayments: completedPayments.length,
+      failedPayments: failedPayments.length,
+      pendingPayments: pendingPayments.length,
+      paymentVolume: completedPayments.reduce((s: number, p: any) => s + Number(p.amount), 0),
+      verifiedUsers,
+      unverifiedUsers,
+    };
+  }, [allTransactions, profiles, allPayments, periodDays]);
 
   const startEditUser = (profile: any) => {
     setEditingUser(profile);
@@ -97,26 +142,15 @@ const AdminPanel = () => {
     if (!editingUser) return;
     setSavingUser(true);
     try {
-      const result = await flutterwaveApi.adminUpdateUser(editingUser.user_id, {
-        bvn_verified: editForm.bvn_verified,
-        bvn: editForm.bvn,
-        business_name: editForm.business_name,
-        first_name: editForm.first_name,
-        last_name: editForm.last_name,
-        account_type: editForm.account_type,
-        phone: editForm.phone,
-      });
-      if (result.success) {
-        toast.success(`Updated ${editForm.first_name} ${editForm.last_name}`);
-        setEditingUser(null);
-        loadAdminData();
-      } else toast.error(result.error || 'Update failed');
+      const result = await flutterwaveApi.adminUpdateUser(editingUser.user_id, editForm);
+      if (result.success) { toast.success(`Updated ${editForm.first_name} ${editForm.last_name}`); setEditingUser(null); loadAdminData(); }
+      else toast.error(result.error || 'Update failed');
     } catch (err: any) { toast.error(err.message); }
     setSavingUser(false);
   };
 
   const handleDeleteUser = async (userId: string, name: string) => {
-    if (!confirm(`Permanently delete "${name}" and all associated data (virtual accounts, BVN, cards)? This cannot be undone.`)) return;
+    if (!confirm(`Permanently delete "${name}" and all associated data? This cannot be undone.`)) return;
     setDeletingUser(userId);
     try {
       const result = await flutterwaveApi.adminDeleteUser(userId);
@@ -153,7 +187,7 @@ const AdminPanel = () => {
         is_broadcast: messageForm.is_broadcast,
       });
       if (result.success) {
-        toast.success(messageForm.is_broadcast ? 'Broadcast sent to all users' : 'Message sent');
+        toast.success(messageForm.is_broadcast ? 'Broadcast sent' : 'Message sent');
         setShowMessageModal(false);
         setMessageForm({ recipient_user_id: '', subject: '', message: '', is_broadcast: false });
       } else toast.error(result.error || 'Failed');
@@ -176,13 +210,6 @@ const AdminPanel = () => {
     );
   }
 
-  const stats = [
-    { label: 'Total Users', value: profiles.length.toString(), icon: Users, color: 'text-primary' },
-    { label: 'Total Volume', value: formatNaira(totalVolume), icon: TrendingUp, color: 'text-[hsl(var(--success))]' },
-    { label: 'Platform Revenue', value: formatNaira(platformRevenue), icon: DollarSign, color: 'text-accent' },
-    { label: 'Pending BVN', value: pendingVerifications.toString(), icon: Shield, color: 'text-[hsl(var(--warning))]' },
-  ];
-
   const tabs = [
     { key: 'overview', label: 'Overview', icon: LayoutDashboard },
     { key: 'users', label: 'Users', icon: Users },
@@ -204,6 +231,8 @@ const AdminPanel = () => {
   );
 
   const openTickets = tickets.filter(t => t.status === 'open').length;
+
+  const periodLabels: Record<string, string> = { daily: 'Today', weekly: 'This Week', monthly: 'This Month', annual: 'This Year', all: 'All Time' };
 
   return (
     <div className="min-h-screen bg-background">
@@ -235,27 +264,104 @@ const AdminPanel = () => {
 
         {activeTab === 'overview' && (
           <div className="space-y-8">
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-              {stats.map((stat, i) => (
-                <div key={stat.label} className={`stat-card section-reveal stagger-${i + 1}`}>
-                  <stat.icon className={`w-5 h-5 ${stat.color} mb-3`} />
-                  <p className="text-2xl font-bold">{stat.value}</p>
-                  <p className="text-sm text-muted-foreground mt-1">{stat.label}</p>
-                </div>
+            {/* Period Selector */}
+            <div className="flex items-center gap-2 flex-wrap section-reveal">
+              <Calendar className="w-4 h-4 text-muted-foreground" />
+              {(['daily', 'weekly', 'monthly', 'annual', 'all'] as const).map(p => (
+                <button key={p} onClick={() => setStatsPeriod(p)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${statsPeriod === p ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground hover:bg-muted/80'}`}>
+                  {periodLabels[p]}
+                </button>
               ))}
             </div>
+
+            {/* Top Stats */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 section-reveal stagger-1">
+              <div className="stat-card border-l-4 border-l-primary">
+                <Users className="w-5 h-5 text-primary mb-3" />
+                <p className="text-2xl font-bold">{analytics.totalUsers}</p>
+                <p className="text-sm text-muted-foreground mt-1">Total Users</p>
+              </div>
+              <div className="stat-card border-l-4 border-l-[hsl(var(--success))]">
+                <UserPlus className="w-5 h-5 text-[hsl(var(--success))] mb-3" />
+                <p className="text-2xl font-bold">{analytics.dailyNewUsers}</p>
+                <p className="text-sm text-muted-foreground mt-1">New Today</p>
+              </div>
+              <div className="stat-card border-l-4 border-l-[hsl(var(--info))]">
+                <TrendingUp className="w-5 h-5 text-[hsl(var(--info))] mb-3" />
+                <p className="text-2xl font-bold">{formatNaira(analytics.totalVolume)}</p>
+                <p className="text-sm text-muted-foreground mt-1">Volume ({periodLabels[statsPeriod]})</p>
+              </div>
+              <div className="stat-card border-l-4 border-l-accent">
+                <DollarSign className="w-5 h-5 text-accent mb-3" />
+                <p className="text-2xl font-bold">{formatNaira(analytics.revenue)}</p>
+                <p className="text-sm text-muted-foreground mt-1">Revenue ({periodLabels[statsPeriod]})</p>
+              </div>
+            </div>
+
+            {/* Detailed Stats */}
+            <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 section-reveal stagger-2">
+              <div className="stat-card">
+                <div className="flex items-center gap-2 mb-2">
+                  <Activity className="w-4 h-4 text-[hsl(var(--teal))]" />
+                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Transactions</p>
+                </div>
+                <p className="text-xl font-bold">{analytics.transactionCount}</p>
+              </div>
+              <div className="stat-card">
+                <div className="flex items-center gap-2 mb-2">
+                  <TrendingUp className="w-4 h-4 text-[hsl(var(--success))]" />
+                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Credits</p>
+                </div>
+                <p className="text-xl font-bold">{formatNaira(analytics.totalCredit)}</p>
+              </div>
+              <div className="stat-card">
+                <div className="flex items-center gap-2 mb-2">
+                  <Send className="w-4 h-4 text-destructive" />
+                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Debits</p>
+                </div>
+                <p className="text-xl font-bold">{formatNaira(analytics.totalDebit)}</p>
+              </div>
+              <div className="stat-card">
+                <div className="flex items-center gap-2 mb-2">
+                  <BarChart3 className="w-4 h-4 text-[hsl(var(--purple))]" />
+                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Payment Volume</p>
+                </div>
+                <p className="text-xl font-bold">{formatNaira(analytics.paymentVolume)}</p>
+              </div>
+            </div>
+
+            {/* Payment & User Stats */}
             <div className="grid sm:grid-cols-3 gap-4 section-reveal stagger-3">
               <div className="stat-card border-l-4 border-l-[hsl(var(--warning))]">
-                <p className="text-2xl font-bold">{allPayments.filter(p => p.status === 'pending').length}</p>
+                <p className="text-2xl font-bold">{analytics.pendingPayments}</p>
                 <p className="text-sm text-muted-foreground mt-1">Pending Payments</p>
               </div>
               <div className="stat-card border-l-4 border-l-[hsl(var(--success))]">
-                <p className="text-2xl font-bold">{allPayments.filter(p => p.status === 'completed').length}</p>
+                <p className="text-2xl font-bold">{analytics.completedPayments}</p>
                 <p className="text-sm text-muted-foreground mt-1">Completed Payments</p>
               </div>
               <div className="stat-card border-l-4 border-l-destructive">
-                <p className="text-2xl font-bold">{openTickets}</p>
-                <p className="text-sm text-muted-foreground mt-1">Open Support Tickets</p>
+                <p className="text-2xl font-bold">{analytics.failedPayments}</p>
+                <p className="text-sm text-muted-foreground mt-1">Failed Payments</p>
+              </div>
+            </div>
+
+            <div className="grid sm:grid-cols-3 gap-4 section-reveal stagger-4">
+              <div className="stat-card">
+                <Shield className="w-5 h-5 text-[hsl(var(--success))] mb-2" />
+                <p className="text-xl font-bold">{analytics.verifiedUsers}</p>
+                <p className="text-sm text-muted-foreground mt-1">BVN Verified</p>
+              </div>
+              <div className="stat-card">
+                <AlertTriangle className="w-5 h-5 text-[hsl(var(--warning))] mb-2" />
+                <p className="text-xl font-bold">{analytics.unverifiedUsers}</p>
+                <p className="text-sm text-muted-foreground mt-1">Unverified Users</p>
+              </div>
+              <div className="stat-card">
+                <HelpCircle className="w-5 h-5 text-destructive mb-2" />
+                <p className="text-xl font-bold">{openTickets}</p>
+                <p className="text-sm text-muted-foreground mt-1">Open Tickets</p>
               </div>
             </div>
           </div>
@@ -273,6 +379,7 @@ const AdminPanel = () => {
               </button>
               <button onClick={loadAdminData} className="p-2.5 rounded-lg border hover:bg-muted transition-colors"><RefreshCw className="w-4 h-4" /></button>
             </div>
+            <p className="text-sm text-muted-foreground">{filteredUsers.length} user{filteredUsers.length !== 1 ? 's' : ''} found</p>
             <div className="card-elevated overflow-hidden">
               <div className="overflow-x-auto">
                 <table className="w-full">
@@ -283,6 +390,7 @@ const AdminPanel = () => {
                       <th className="text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider p-4 hidden md:table-cell">Account</th>
                       <th className="text-right text-xs font-semibold text-muted-foreground uppercase tracking-wider p-4">Balance</th>
                       <th className="text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider p-4">BVN</th>
+                      <th className="text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider p-4 hidden lg:table-cell">Joined</th>
                       <th className="text-right text-xs font-semibold text-muted-foreground uppercase tracking-wider p-4">Actions</th>
                     </tr>
                   </thead>
@@ -299,9 +407,10 @@ const AdminPanel = () => {
                         <td className="p-4 text-center">
                           <span className={p.bvn_verified ? 'badge-success' : 'badge-warning'}>{p.bvn_verified ? 'Verified' : 'Pending'}</span>
                         </td>
+                        <td className="p-4 text-sm text-muted-foreground hidden lg:table-cell">{new Date(p.created_at).toLocaleDateString('en-NG', { day: 'numeric', month: 'short', year: 'numeric' })}</td>
                         <td className="p-4 text-right">
                           <div className="flex items-center justify-end gap-1">
-                            <button onClick={() => viewUserDetails(p)} className="p-2 rounded-md hover:bg-primary/10 text-muted-foreground hover:text-primary transition-colors" title="View Details"><Eye className="w-4 h-4" /></button>
+                            <button onClick={() => viewUserDetails(p)} className="p-2 rounded-md hover:bg-primary/10 text-muted-foreground hover:text-primary transition-colors" title="View"><Eye className="w-4 h-4" /></button>
                             <button onClick={() => startEditUser(p)} className="p-2 rounded-md hover:bg-primary/10 text-muted-foreground hover:text-primary transition-colors" title="Edit"><Edit2 className="w-4 h-4" /></button>
                             <button onClick={() => { setMessageForm(f => ({ ...f, recipient_user_id: p.user_id, is_broadcast: false })); setShowMessageModal(true); }}
                               className="p-2 rounded-md hover:bg-[hsl(var(--info))]/10 text-muted-foreground hover:text-[hsl(var(--info))] transition-colors" title="Message"><MessageSquare className="w-4 h-4" /></button>
@@ -342,7 +451,7 @@ const AdminPanel = () => {
                 })}
               </div>
             ) : (
-              <div className="p-12 text-center text-muted-foreground"><FileText className="w-10 h-10 mx-auto mb-3 opacity-40" /><p className="font-medium">No transactions yet</p></div>
+              <div className="p-12 text-center text-muted-foreground"><FileText className="w-10 h-10 mx-auto mb-3 opacity-40" /><p>No transactions yet</p></div>
             )}
           </div>
         )}
@@ -426,7 +535,7 @@ const AdminPanel = () => {
             </div>
             <div className="bg-[hsl(var(--info))]/5 border border-[hsl(var(--info))]/20 rounded-xl p-4 text-sm">
               <p className="font-medium">Messaging</p>
-              <p className="text-muted-foreground mt-1">Send personal messages to individual users or broadcast announcements to all users. Messages appear in each user's Settings → Messages tab.</p>
+              <p className="text-muted-foreground mt-1">Send personal messages to individual users or broadcast announcements to all users.</p>
             </div>
           </div>
         )}
@@ -442,9 +551,16 @@ const AdminPanel = () => {
                 </div>
                 <div>
                   <p className="text-sm font-medium mb-1">Secret Hash</p>
-                  <p className="text-xs text-muted-foreground">Set the same hash value you entered as FLW_WEBHOOK_HASH in your Flutterwave dashboard under Settings → Webhooks → Secret Hash.</p>
+                  <p className="text-xs text-muted-foreground">Set the same hash value you entered as FLW_WEBHOOK_HASH in your Flutterwave dashboard.</p>
                 </div>
-                <p className="text-xs text-muted-foreground">This webhook handles virtual account deposits and automatically credits user wallets.</p>
+              </div>
+            </div>
+            <div className="card-elevated p-6">
+              <h2 className="text-lg font-semibold mb-4">IP Whitelisting</h2>
+              <div className="bg-muted/50 rounded-lg p-4 space-y-2">
+                <p className="text-sm">Add these IP addresses to your Flutterwave IP whitelist:</p>
+                <p className="text-sm font-mono bg-card p-2 rounded border">35.195.187.50</p>
+                <p className="text-xs text-muted-foreground">Go to Flutterwave Dashboard → Settings → API → IP Whitelisting</p>
               </div>
             </div>
             <div className="card-elevated p-6">
@@ -460,7 +576,7 @@ const AdminPanel = () => {
         )}
       </div>
 
-      {/* Edit User Modal - NO wallet balance editing */}
+      {/* Edit User Modal */}
       {editingUser && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-foreground/40" onClick={() => setEditingUser(null)}>
           <div className="bg-card rounded-2xl shadow-xl w-full max-w-lg p-6 section-reveal max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
@@ -515,7 +631,7 @@ const AdminPanel = () => {
               <div className="bg-muted/50 rounded-lg p-3"><p className="text-xs text-muted-foreground">Account</p><p className="font-medium font-mono">{viewingUser.virtual_account_number || 'None'}</p></div>
               <div className="bg-muted/50 rounded-lg p-3"><p className="text-xs text-muted-foreground">BVN</p><p className="font-medium">{viewingUser.bvn || 'Not set'} {viewingUser.bvn_verified ? '✓' : '✗'}</p></div>
               <div className="bg-muted/50 rounded-lg p-3"><p className="text-xs text-muted-foreground">Phone</p><p className="font-medium">{viewingUser.phone || 'Not set'}</p></div>
-              <div className="bg-muted/50 rounded-lg p-3"><p className="text-xs text-muted-foreground">Type</p><p className="font-medium capitalize">{viewingUser.account_type}</p></div>
+              <div className="bg-muted/50 rounded-lg p-3"><p className="text-xs text-muted-foreground">Joined</p><p className="font-medium">{new Date(viewingUser.created_at).toLocaleDateString('en-NG', { day: 'numeric', month: 'long', year: 'numeric' })}</p></div>
             </div>
             <h3 className="font-semibold mb-3">Recent Transactions</h3>
             {userTransactions.length > 0 ? (
@@ -553,7 +669,7 @@ const AdminPanel = () => {
               <div className="flex gap-3">
                 <button onClick={() => setReplyingTicket(null)} className="flex-1 py-2.5 rounded-lg border text-sm font-medium hover:bg-muted">Cancel</button>
                 <button onClick={handleReplyTicket} disabled={savingReply} className="flex-1 btn-primary py-2.5 rounded-lg text-sm font-medium flex items-center justify-center gap-2">
-                  {savingReply ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Send className="w-4 h-4" /> Send Reply</>}
+                  {savingReply ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Send className="w-4 h-4" /> Send</>}
                 </button>
               </div>
             </div>
@@ -583,7 +699,7 @@ const AdminPanel = () => {
                 <input value={messageForm.subject} onChange={e => setMessageForm(p => ({ ...p, subject: e.target.value }))} className="input-field w-full" placeholder="Message subject" />
               </div>
               <div><label className="block text-sm font-medium mb-1.5">Message</label>
-                <textarea value={messageForm.message} onChange={e => setMessageForm(p => ({ ...p, message: e.target.value }))} className="input-field w-full" rows={4} placeholder="Your message..." />
+                <textarea value={messageForm.message} onChange={e => setMessageForm(p => ({ ...p, message: e.target.value }))} className="input-field w-full" rows={4} placeholder="Type your message..." />
               </div>
               <div className="flex gap-3">
                 <button onClick={() => setShowMessageModal(false)} className="flex-1 py-2.5 rounded-lg border text-sm font-medium hover:bg-muted">Cancel</button>
