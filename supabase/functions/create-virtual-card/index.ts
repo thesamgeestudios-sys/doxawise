@@ -113,8 +113,11 @@ serve(async (req) => {
           { headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       } else {
+        const errorMsg = flwData.message?.includes("contact your account administrator")
+          ? "Virtual card creation is not enabled on this account. Please ensure IP whitelisting is configured and virtual cards are activated on your Flutterwave dashboard."
+          : flwData.message || "Failed to create virtual card";
         return new Response(
-          JSON.stringify({ success: false, message: flwData.message || "Failed to create virtual card", raw: flwData }),
+          JSON.stringify({ success: false, message: errorMsg, raw: flwData }),
           { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
