@@ -10,6 +10,8 @@ import Register from "./pages/Register";
 import Dashboard from "./pages/Dashboard";
 import Staff from "./pages/Staff";
 import Payments from "./pages/Payments";
+import SendMoney from "./pages/SendMoney";
+import InternationalPayments from "./pages/InternationalPayments";
 import Cards from "./pages/Cards";
 import Transactions from "./pages/Transactions";
 import UserSettings from "./pages/UserSettings";
@@ -35,6 +37,8 @@ const App = () => (
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/dashboard/staff" element={<Staff />} />
             <Route path="/dashboard/payments" element={<Payments />} />
+            <Route path="/dashboard/send" element={<SendMoney />} />
+            <Route path="/dashboard/international" element={<InternationalPayments />} />
             <Route path="/dashboard/cards" element={<Cards />} />
             <Route path="/dashboard/transactions" element={<Transactions />} />
             <Route path="/dashboard/settings" element={<UserSettings />} />
