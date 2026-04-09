@@ -1,4 +1,4 @@
-import { ReactNode, useState } from 'react';
+import { ReactNode, useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { APP_NAME } from '@/lib/constants';
@@ -7,7 +7,6 @@ import {
   FileText, ChevronDown, Wallet, Globe, Shield, Banknote
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
-import { useState as useStateHook, useEffect as useEffectHook } from 'react';
 
 const navItems = [
   { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
@@ -27,7 +26,7 @@ const DashboardLayout = ({ children }: { children: ReactNode }) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
 
-  useEffectHook(() => {
+  useEffect(() => {
     if (user) {
       supabase.from('user_roles').select('role').eq('user_id', user.id).eq('role', 'admin')
         .then(({ data }) => setIsAdmin(!!(data && data.length > 0)));
