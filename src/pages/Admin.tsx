@@ -61,6 +61,13 @@ const AdminPanel = () => {
 
   useEffect(() => { checkAdmin(); }, [user]);
 
+  const loadCmsData = async () => {
+    const { data } = await supabase.from('cms_pages').select('*').order('page_name').order('display_order');
+    if (data) setCmsPages(data);
+  };
+
+  useEffect(() => { if (isAdmin) loadCmsData(); }, [isAdmin]);
+
   const checkAdmin = async () => {
     if (!user) { navigate('/login'); return; }
     const { data } = await supabase.from('user_roles').select('role').eq('user_id', user.id).eq('role', 'admin');
