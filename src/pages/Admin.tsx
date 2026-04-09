@@ -817,6 +817,78 @@ const AdminPanel = () => {
           </div>
         </div>
       )}
+
+      {/* CMS Edit Modal */}
+      {cmsEditItem && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-foreground/40" onClick={() => setCmsEditItem(null)}>
+          <div className="bg-card rounded-2xl shadow-xl w-full max-w-md p-6 section-reveal max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-bold">Edit: {cmsEditItem.section_name}</h2>
+              <button onClick={() => setCmsEditItem(null)} className="p-2 hover:bg-muted rounded-lg"><X className="w-4 h-4" /></button>
+            </div>
+            <div className="space-y-4">
+              <div><label className="block text-sm font-medium mb-1.5">Content Text</label>
+                <textarea value={cmsForm.content_text} onChange={e => setCmsForm(p => ({ ...p, content_text: e.target.value }))} className="input-field w-full" rows={4} />
+              </div>
+              <div><label className="block text-sm font-medium mb-1.5">Image URL</label>
+                <input value={cmsForm.content_image_url} onChange={e => setCmsForm(p => ({ ...p, content_image_url: e.target.value }))} className="input-field w-full" placeholder="https://..." />
+              </div>
+              <div><label className="block text-sm font-medium mb-1.5">Display Order</label>
+                <input type="number" value={cmsForm.display_order} onChange={e => setCmsForm(p => ({ ...p, display_order: parseInt(e.target.value) || 0 }))} className="input-field w-full" />
+              </div>
+              <label className="flex items-center gap-3 cursor-pointer">
+                <input type="checkbox" checked={cmsForm.is_visible} onChange={e => setCmsForm(p => ({ ...p, is_visible: e.target.checked }))} className="w-4 h-4 rounded border-input accent-primary" />
+                <span className="text-sm font-medium">Visible</span>
+              </label>
+              <div className="flex gap-3 pt-2">
+                <button onClick={() => setCmsEditItem(null)} className="flex-1 py-2.5 rounded-lg border text-sm font-medium hover:bg-muted">Cancel</button>
+                <button onClick={saveCmsEdit} disabled={savingCms} className="flex-1 btn-primary py-2.5 rounded-lg text-sm font-medium flex items-center justify-center gap-2">
+                  {savingCms ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Save className="w-4 h-4" /> Save</>}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* New CMS Block Modal */}
+      {showNewCmsModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-foreground/40" onClick={() => setShowNewCmsModal(false)}>
+          <div className="bg-card rounded-2xl shadow-xl w-full max-w-md p-6 section-reveal max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+            <h2 className="text-lg font-bold mb-4">Add Content Block</h2>
+            <div className="space-y-4">
+              <div><label className="block text-sm font-medium mb-1.5">Page</label>
+                <select value={newCmsForm.page_name} onChange={e => setNewCmsForm(p => ({ ...p, page_name: e.target.value }))} className="input-field w-full">
+                  <option value="home">Home</option><option value="login">Login</option><option value="register">Register</option><option value="terms">Terms</option>
+                </select>
+              </div>
+              <div><label className="block text-sm font-medium mb-1.5">Section Name</label>
+                <input value={newCmsForm.section_name} onChange={e => setNewCmsForm(p => ({ ...p, section_name: e.target.value }))} className="input-field w-full" placeholder="hero_title, feature_1, etc." />
+              </div>
+              <div><label className="block text-sm font-medium mb-1.5">Content Type</label>
+                <select value={newCmsForm.content_type} onChange={e => setNewCmsForm(p => ({ ...p, content_type: e.target.value }))} className="input-field w-full">
+                  <option value="text">Text</option><option value="image">Image</option><option value="html">HTML</option><option value="link">Link</option>
+                </select>
+              </div>
+              <div><label className="block text-sm font-medium mb-1.5">Content</label>
+                <textarea value={newCmsForm.content_text} onChange={e => setNewCmsForm(p => ({ ...p, content_text: e.target.value }))} className="input-field w-full" rows={3} />
+              </div>
+              <div><label className="block text-sm font-medium mb-1.5">Image URL</label>
+                <input value={newCmsForm.content_image_url} onChange={e => setNewCmsForm(p => ({ ...p, content_image_url: e.target.value }))} className="input-field w-full" placeholder="https://..." />
+              </div>
+              <div><label className="block text-sm font-medium mb-1.5">Display Order</label>
+                <input type="number" value={newCmsForm.display_order} onChange={e => setNewCmsForm(p => ({ ...p, display_order: parseInt(e.target.value) || 0 }))} className="input-field w-full" />
+              </div>
+              <div className="flex gap-3 pt-2">
+                <button onClick={() => setShowNewCmsModal(false)} className="flex-1 py-2.5 rounded-lg border text-sm font-medium hover:bg-muted">Cancel</button>
+                <button onClick={createCmsItem} disabled={savingCms} className="flex-1 btn-primary py-2.5 rounded-lg text-sm font-medium flex items-center justify-center gap-2">
+                  {savingCms ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Create'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
