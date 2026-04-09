@@ -595,6 +595,57 @@ const AdminPanel = () => {
           </div>
         )}
 
+        {activeTab === 'cms' && (
+          <div className="space-y-6 section-reveal">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-lg font-semibold">Content Management</h2>
+                <p className="text-sm text-muted-foreground">Edit all page content, images, and layout</p>
+              </div>
+              <div className="flex gap-2">
+                <button onClick={loadCmsData} className="p-2.5 rounded-lg border hover:bg-muted transition-colors"><RefreshCw className="w-4 h-4" /></button>
+                <button onClick={() => setShowNewCmsModal(true)} className="btn-primary px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2"><Globe className="w-4 h-4" /> Add Block</button>
+              </div>
+            </div>
+
+            {Array.from(new Set(cmsPages.map(c => c.page_name))).map(pageName => (
+              <div key={pageName} className="card-elevated overflow-hidden">
+                <div className="bg-muted/50 px-4 py-3 border-b">
+                  <h3 className="font-semibold capitalize">{pageName} Page</h3>
+                </div>
+                <div className="divide-y">
+                  {cmsPages.filter(c => c.page_name === pageName).map(item => (
+                    <div key={item.id} className="flex items-center justify-between px-4 py-3 hover:bg-muted/30 transition-colors">
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-mono bg-muted px-2 py-0.5 rounded">{item.section_name}</span>
+                          <span className="text-xs text-muted-foreground capitalize">{item.content_type}</span>
+                          {!item.is_visible && <span className="text-xs bg-destructive/10 text-destructive px-2 py-0.5 rounded">Hidden</span>}
+                        </div>
+                        <p className="text-sm text-muted-foreground truncate mt-1 max-w-md">{item.content_text || item.content_image_url || '(empty)'}</p>
+                      </div>
+                      <div className="flex items-center gap-1 shrink-0 ml-4">
+                        <button onClick={() => moveCmsItem(item, 'up')} className="p-1.5 rounded hover:bg-muted text-muted-foreground text-xs">↑</button>
+                        <button onClick={() => moveCmsItem(item, 'down')} className="p-1.5 rounded hover:bg-muted text-muted-foreground text-xs">↓</button>
+                        <button onClick={() => { setCmsEditItem(item); setCmsForm({ content_text: item.content_text || '', content_image_url: item.content_image_url || '', is_visible: item.is_visible, display_order: item.display_order }); }}
+                          className="p-1.5 rounded hover:bg-primary/10 text-muted-foreground hover:text-primary"><Edit2 className="w-4 h-4" /></button>
+                        <button onClick={() => deleteCmsItem(item.id)} className="p-1.5 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive"><Trash2 className="w-4 h-4" /></button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+
+            {cmsPages.length === 0 && (
+              <div className="card-elevated p-12 text-center text-muted-foreground">
+                <Globe className="w-10 h-10 mx-auto mb-3 opacity-40" />
+                <p className="font-medium">No CMS content yet</p>
+              </div>
+            )}
+          </div>
+        )}
+
         {activeTab === 'settings' && (
           <div className="space-y-6 section-reveal">
             <div className="card-elevated p-6">
