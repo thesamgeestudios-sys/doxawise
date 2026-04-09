@@ -4,13 +4,17 @@ import { useAuth } from '@/hooks/useAuth';
 import { APP_NAME } from '@/lib/constants';
 import {
   LayoutDashboard, Users, CreditCard, Settings, LogOut, Menu, X,
-  FileText, ChevronDown, Wallet
+  FileText, ChevronDown, Wallet, Globe, Shield, Banknote
 } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { useState as useStateHook, useEffect as useEffectHook } from 'react';
 
 const navItems = [
   { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
   { to: '/dashboard/staff', icon: Users, label: 'Staff' },
   { to: '/dashboard/payments', icon: CreditCard, label: 'Payments' },
+  { to: '/dashboard/send', icon: Banknote, label: 'Send Money' },
+  { to: '/dashboard/international', icon: Globe, label: 'International' },
   { to: '/dashboard/cards', icon: Wallet, label: 'Cards' },
   { to: '/dashboard/transactions', icon: FileText, label: 'Transactions' },
   { to: '/dashboard/settings', icon: Settings, label: 'Settings' },

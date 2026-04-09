@@ -4,6 +4,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { FileText, Download, ArrowUpRight, ArrowDownRight, Loader2 } from 'lucide-react';
 import { formatNaira } from '@/lib/constants';
+import TransactionReceipt from '@/components/TransactionReceipt';
 
 interface Transaction {
   id: string;
@@ -20,9 +21,14 @@ const Transactions = () => {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<'all' | 'credit' | 'debit'>('all');
+  const [selectedTx, setSelectedTx] = useState<Transaction | null>(null);
+  const [profile, setProfile] = useState<any>(null);
 
   useEffect(() => {
-    if (user) loadTransactions();
+    if (user) {
+      loadTransactions();
+      loadProfile();
+    }
   }, [user]);
 
   const loadTransactions = async () => {
@@ -34,6 +40,11 @@ const Transactions = () => {
       .order('created_at', { ascending: false });
     if (data) setTransactions(data as Transaction[]);
     setLoading(false);
+  };
+
+  const loadProfile = async () => {
+    const { data } = await supabase.from('profiles').select('*').eq('user_id', user!.id).single();
+    if (data) setProfile(data);
   };
 
   const filtered = filter === 'all' ? transactions : transactions.filter(t => t.type === filter);
@@ -66,7 +77,7 @@ const Transactions = () => {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 section-reveal">
           <div>
             <h1 className="text-2xl font-bold">Transaction History</h1>
-            <p className="text-muted-foreground">Complete record of all payments and top-ups</p>
+            <p className="text-muted-foreground">Click any transaction to download receipt</p>
           </div>
           <div className="flex gap-3">
             <div className="flex bg-muted rounded-lg p-0.5">
@@ -93,7 +104,7 @@ const Transactions = () => {
           ) : filtered.length > 0 ? (
             <div className="divide-y">
               {filtered.map(tx => (
-                <div key={tx.id} className="flex items-center justify-between px-6 py-4 hover:bg-muted/30 transition-colors">
+                <div key={tx.id} onClick={() => setSelectedTx(tx)} className="flex items-center justify-between px-6 py-4 hover:bg-muted/30 transition-colors cursor-pointer">
                   <div className="flex items-center gap-3">
                     <div className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 ${tx.type === 'credit' ? 'bg-[hsl(var(--success))]/10' : 'bg-destructive/10'}`}>
                       {tx.type === 'credit' ? (
@@ -130,6 +141,16 @@ const Transactions = () => {
           )}
         </div>
       </div>
+
+      {selectedTx && (
+        <TransactionReceipt
+          transaction={selectedTx}
+          onClose={() => setSelectedTx(null)}
+          senderName={profile ? `${profile.first_name} ${profile.last_name}` : undefined}
+          senderAccount={profile?.virtual_account_number || undefined}
+          senderBank={profile?.virtual_account_bank || undefined}
+        />
+      )}
     </DashboardLayout>
   );
 };
