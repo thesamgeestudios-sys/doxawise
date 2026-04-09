@@ -23,7 +23,7 @@ function filterByDateRange(items: any[], field: string, days: number | null) {
 const AdminPanel = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'transactions' | 'payments' | 'tickets' | 'messages' | 'settings'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'transactions' | 'payments' | 'tickets' | 'messages' | 'cms' | 'settings'>('overview');
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -210,6 +210,57 @@ const AdminPanel = () => {
     );
   }
 
+  // CMS state
+  const [cmsPages, setCmsPages] = useState<any[]>([]);
+  const [cmsEditItem, setCmsEditItem] = useState<any>(null);
+  const [cmsForm, setCmsForm] = useState({ content_text: '', content_image_url: '', is_visible: true, display_order: 0 });
+  const [savingCms, setSavingCms] = useState(false);
+  const [newCmsForm, setNewCmsForm] = useState({ page_name: 'home', section_name: '', content_type: 'text', content_text: '', content_image_url: '', display_order: 0 });
+  const [showNewCmsModal, setShowNewCmsModal] = useState(false);
+
+  const loadCmsData = async () => {
+    const { data } = await supabase.from('cms_pages').select('*').order('page_name').order('display_order');
+    if (data) setCmsPages(data);
+  };
+
+  useEffect(() => { if (isAdmin) loadCmsData(); }, [isAdmin]);
+
+  const saveCmsEdit = async () => {
+    if (!cmsEditItem) return;
+    setSavingCms(true);
+    const { error } = await supabase.from('cms_pages').update({
+      content_text: cmsForm.content_text,
+      content_image_url: cmsForm.content_image_url,
+      is_visible: cmsForm.is_visible,
+      display_order: cmsForm.display_order,
+    }).eq('id', cmsEditItem.id);
+    if (error) toast.error(error.message);
+    else { toast.success('Content updated'); setCmsEditItem(null); loadCmsData(); }
+    setSavingCms(false);
+  };
+
+  const deleteCmsItem = async (id: string) => {
+    if (!confirm('Delete this content block?')) return;
+    await supabase.from('cms_pages').delete().eq('id', id);
+    toast.success('Deleted');
+    loadCmsData();
+  };
+
+  const createCmsItem = async () => {
+    if (!newCmsForm.section_name) { toast.error('Section name required'); return; }
+    setSavingCms(true);
+    const { error } = await supabase.from('cms_pages').insert(newCmsForm);
+    if (error) toast.error(error.message);
+    else { toast.success('Content block added'); setShowNewCmsModal(false); setNewCmsForm({ page_name: 'home', section_name: '', content_type: 'text', content_text: '', content_image_url: '', display_order: 0 }); loadCmsData(); }
+    setSavingCms(false);
+  };
+
+  const moveCmsItem = async (item: any, direction: 'up' | 'down') => {
+    const newOrder = direction === 'up' ? item.display_order - 1 : item.display_order + 1;
+    await supabase.from('cms_pages').update({ display_order: newOrder }).eq('id', item.id);
+    loadCmsData();
+  };
+
   const tabs = [
     { key: 'overview', label: 'Overview', icon: LayoutDashboard },
     { key: 'users', label: 'Users', icon: Users },
@@ -217,6 +268,7 @@ const AdminPanel = () => {
     { key: 'payments', label: 'Payments', icon: CreditCard },
     { key: 'tickets', label: 'Support', icon: HelpCircle },
     { key: 'messages', label: 'Messages', icon: Mail },
+    { key: 'cms', label: 'CMS', icon: Globe },
     { key: 'settings', label: 'Settings', icon: Settings },
   ] as const;
 
