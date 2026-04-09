@@ -51,6 +51,14 @@ const AdminPanel = () => {
   const [viewingUser, setViewingUser] = useState<any>(null);
   const [userTransactions, setUserTransactions] = useState<any[]>([]);
 
+  // CMS state (must be before early returns)
+  const [cmsPages, setCmsPages] = useState<any[]>([]);
+  const [cmsEditItem, setCmsEditItem] = useState<any>(null);
+  const [cmsForm, setCmsForm] = useState({ content_text: '', content_image_url: '', is_visible: true, display_order: 0 });
+  const [savingCms, setSavingCms] = useState(false);
+  const [newCmsForm, setNewCmsForm] = useState({ page_name: 'home', section_name: '', content_type: 'text', content_text: '', content_image_url: '', display_order: 0 });
+  const [showNewCmsModal, setShowNewCmsModal] = useState(false);
+
   useEffect(() => { checkAdmin(); }, [user]);
 
   const checkAdmin = async () => {
@@ -209,14 +217,6 @@ const AdminPanel = () => {
       </div>
     );
   }
-
-  // CMS state
-  const [cmsPages, setCmsPages] = useState<any[]>([]);
-  const [cmsEditItem, setCmsEditItem] = useState<any>(null);
-  const [cmsForm, setCmsForm] = useState({ content_text: '', content_image_url: '', is_visible: true, display_order: 0 });
-  const [savingCms, setSavingCms] = useState(false);
-  const [newCmsForm, setNewCmsForm] = useState({ page_name: 'home', section_name: '', content_type: 'text', content_text: '', content_image_url: '', display_order: 0 });
-  const [showNewCmsModal, setShowNewCmsModal] = useState(false);
 
   const loadCmsData = async () => {
     const { data } = await supabase.from('cms_pages').select('*').order('page_name').order('display_order');
