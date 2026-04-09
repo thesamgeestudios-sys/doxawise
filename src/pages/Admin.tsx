@@ -225,12 +225,8 @@ const AdminPanel = () => {
     );
   }
 
-  const loadCmsData = async () => {
-    const { data } = await supabase.from('cms_pages').select('*').order('page_name').order('display_order');
-    if (data) setCmsPages(data);
-  };
 
-  useEffect(() => { if (isAdmin) loadCmsData(); }, [isAdmin]);
+
 
   const saveCmsEdit = async () => {
     if (!cmsEditItem) return;
