@@ -49,7 +49,7 @@ const Payments = () => {
   const [resolvingAccount, setResolvingAccount] = useState(false);
   const [resolvedName, setResolvedName] = useState('');
   const [selectedStaff, setSelectedStaff] = useState<Set<string>>(new Set());
-  const [form, setForm] = useState({ recipientName: '', bankCode: '', bankName: '', accountNumber: '', amount: '', scheduledDate: '' });
+  const [form, setForm] = useState({ recipientName: '', bankCode: '', bankName: '', accountNumber: '', amount: '', scheduledDate: '', scheduledTime: '09:00' });
 
   useEffect(() => {
     if (user) {
@@ -132,7 +132,7 @@ const Payments = () => {
       account_number: form.accountNumber,
       amount,
       fee,
-      scheduled_date: form.scheduledDate,
+      scheduled_date: `${form.scheduledDate}T${form.scheduledTime}`,
       status: 'pending',
     });
 
@@ -141,7 +141,7 @@ const Payments = () => {
       toast.error(error.message);
     } else {
       toast.success(`Payment of ${formatNaira(amount)} scheduled`);
-      setForm({ recipientName: '', bankCode: '', bankName: '', accountNumber: '', amount: '', scheduledDate: '' });
+      setForm({ recipientName: '', bankCode: '', bankName: '', accountNumber: '', amount: '', scheduledDate: '', scheduledTime: '09:00' });
       setBankSearch('');
       setResolvedName('');
       setShowScheduleModal(false);
@@ -398,9 +398,15 @@ const Payments = () => {
                     </p>
                   )}
                 </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1.5">Scheduled Date</label>
-                  <input type="date" value={form.scheduledDate} onChange={e => setForm(p => ({ ...p, scheduledDate: e.target.value }))} required className="input-field w-full" />
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-sm font-medium mb-1.5">Date</label>
+                    <input type="date" value={form.scheduledDate} onChange={e => setForm(p => ({ ...p, scheduledDate: e.target.value }))} required className="input-field w-full" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1.5">Time</label>
+                    <input type="time" value={form.scheduledTime} onChange={e => setForm(p => ({ ...p, scheduledTime: e.target.value }))} required className="input-field w-full" />
+                  </div>
                 </div>
                 <div className="flex gap-3 pt-2">
                   <button type="button" onClick={() => { setShowScheduleModal(false); setBankSearch(''); setResolvedName(''); }} className="flex-1 py-2.5 rounded-lg border text-sm font-medium hover:bg-muted transition-colors">Cancel</button>

@@ -23,7 +23,7 @@ function filterByDateRange(items: any[], field: string, days: number | null) {
 const AdminPanel = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'transactions' | 'payments' | 'tickets' | 'messages' | 'settings'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'transactions' | 'payments' | 'tickets' | 'messages' | 'cms' | 'settings'>('overview');
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -51,7 +51,22 @@ const AdminPanel = () => {
   const [viewingUser, setViewingUser] = useState<any>(null);
   const [userTransactions, setUserTransactions] = useState<any[]>([]);
 
+  // CMS state (must be before early returns)
+  const [cmsPages, setCmsPages] = useState<any[]>([]);
+  const [cmsEditItem, setCmsEditItem] = useState<any>(null);
+  const [cmsForm, setCmsForm] = useState({ content_text: '', content_image_url: '', is_visible: true, display_order: 0 });
+  const [savingCms, setSavingCms] = useState(false);
+  const [newCmsForm, setNewCmsForm] = useState({ page_name: 'home', section_name: '', content_type: 'text', content_text: '', content_image_url: '', display_order: 0 });
+  const [showNewCmsModal, setShowNewCmsModal] = useState(false);
+
   useEffect(() => { checkAdmin(); }, [user]);
+
+  const loadCmsData = async () => {
+    const { data } = await supabase.from('cms_pages').select('*').order('page_name').order('display_order');
+    if (data) setCmsPages(data);
+  };
+
+  useEffect(() => { if (isAdmin) loadCmsData(); }, [isAdmin]);
 
   const checkAdmin = async () => {
     if (!user) { navigate('/login'); return; }
@@ -210,6 +225,45 @@ const AdminPanel = () => {
     );
   }
 
+
+
+
+  const saveCmsEdit = async () => {
+    if (!cmsEditItem) return;
+    setSavingCms(true);
+    const { error } = await supabase.from('cms_pages').update({
+      content_text: cmsForm.content_text,
+      content_image_url: cmsForm.content_image_url,
+      is_visible: cmsForm.is_visible,
+      display_order: cmsForm.display_order,
+    }).eq('id', cmsEditItem.id);
+    if (error) toast.error(error.message);
+    else { toast.success('Content updated'); setCmsEditItem(null); loadCmsData(); }
+    setSavingCms(false);
+  };
+
+  const deleteCmsItem = async (id: string) => {
+    if (!confirm('Delete this content block?')) return;
+    await supabase.from('cms_pages').delete().eq('id', id);
+    toast.success('Deleted');
+    loadCmsData();
+  };
+
+  const createCmsItem = async () => {
+    if (!newCmsForm.section_name) { toast.error('Section name required'); return; }
+    setSavingCms(true);
+    const { error } = await supabase.from('cms_pages').insert(newCmsForm);
+    if (error) toast.error(error.message);
+    else { toast.success('Content block added'); setShowNewCmsModal(false); setNewCmsForm({ page_name: 'home', section_name: '', content_type: 'text', content_text: '', content_image_url: '', display_order: 0 }); loadCmsData(); }
+    setSavingCms(false);
+  };
+
+  const moveCmsItem = async (item: any, direction: 'up' | 'down') => {
+    const newOrder = direction === 'up' ? item.display_order - 1 : item.display_order + 1;
+    await supabase.from('cms_pages').update({ display_order: newOrder }).eq('id', item.id);
+    loadCmsData();
+  };
+
   const tabs = [
     { key: 'overview', label: 'Overview', icon: LayoutDashboard },
     { key: 'users', label: 'Users', icon: Users },
@@ -217,6 +271,7 @@ const AdminPanel = () => {
     { key: 'payments', label: 'Payments', icon: CreditCard },
     { key: 'tickets', label: 'Support', icon: HelpCircle },
     { key: 'messages', label: 'Messages', icon: Mail },
+    { key: 'cms', label: 'CMS', icon: Globe },
     { key: 'settings', label: 'Settings', icon: Settings },
   ] as const;
 
@@ -540,6 +595,57 @@ const AdminPanel = () => {
           </div>
         )}
 
+        {activeTab === 'cms' && (
+          <div className="space-y-6 section-reveal">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-lg font-semibold">Content Management</h2>
+                <p className="text-sm text-muted-foreground">Edit all page content, images, and layout</p>
+              </div>
+              <div className="flex gap-2">
+                <button onClick={loadCmsData} className="p-2.5 rounded-lg border hover:bg-muted transition-colors"><RefreshCw className="w-4 h-4" /></button>
+                <button onClick={() => setShowNewCmsModal(true)} className="btn-primary px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2"><Globe className="w-4 h-4" /> Add Block</button>
+              </div>
+            </div>
+
+            {Array.from(new Set(cmsPages.map(c => c.page_name))).map(pageName => (
+              <div key={pageName} className="card-elevated overflow-hidden">
+                <div className="bg-muted/50 px-4 py-3 border-b">
+                  <h3 className="font-semibold capitalize">{pageName} Page</h3>
+                </div>
+                <div className="divide-y">
+                  {cmsPages.filter(c => c.page_name === pageName).map(item => (
+                    <div key={item.id} className="flex items-center justify-between px-4 py-3 hover:bg-muted/30 transition-colors">
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-mono bg-muted px-2 py-0.5 rounded">{item.section_name}</span>
+                          <span className="text-xs text-muted-foreground capitalize">{item.content_type}</span>
+                          {!item.is_visible && <span className="text-xs bg-destructive/10 text-destructive px-2 py-0.5 rounded">Hidden</span>}
+                        </div>
+                        <p className="text-sm text-muted-foreground truncate mt-1 max-w-md">{item.content_text || item.content_image_url || '(empty)'}</p>
+                      </div>
+                      <div className="flex items-center gap-1 shrink-0 ml-4">
+                        <button onClick={() => moveCmsItem(item, 'up')} className="p-1.5 rounded hover:bg-muted text-muted-foreground text-xs">↑</button>
+                        <button onClick={() => moveCmsItem(item, 'down')} className="p-1.5 rounded hover:bg-muted text-muted-foreground text-xs">↓</button>
+                        <button onClick={() => { setCmsEditItem(item); setCmsForm({ content_text: item.content_text || '', content_image_url: item.content_image_url || '', is_visible: item.is_visible, display_order: item.display_order }); }}
+                          className="p-1.5 rounded hover:bg-primary/10 text-muted-foreground hover:text-primary"><Edit2 className="w-4 h-4" /></button>
+                        <button onClick={() => deleteCmsItem(item.id)} className="p-1.5 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive"><Trash2 className="w-4 h-4" /></button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+
+            {cmsPages.length === 0 && (
+              <div className="card-elevated p-12 text-center text-muted-foreground">
+                <Globe className="w-10 h-10 mx-auto mb-3 opacity-40" />
+                <p className="font-medium">No CMS content yet</p>
+              </div>
+            )}
+          </div>
+        )}
+
         {activeTab === 'settings' && (
           <div className="space-y-6 section-reveal">
             <div className="card-elevated p-6">
@@ -705,6 +811,78 @@ const AdminPanel = () => {
                 <button onClick={() => setShowMessageModal(false)} className="flex-1 py-2.5 rounded-lg border text-sm font-medium hover:bg-muted">Cancel</button>
                 <button onClick={handleSendMessage} disabled={sendingMessage} className="flex-1 btn-primary py-2.5 rounded-lg text-sm font-medium flex items-center justify-center gap-2">
                   {sendingMessage ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Send className="w-4 h-4" /> Send</>}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* CMS Edit Modal */}
+      {cmsEditItem && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-foreground/40" onClick={() => setCmsEditItem(null)}>
+          <div className="bg-card rounded-2xl shadow-xl w-full max-w-md p-6 section-reveal max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-bold">Edit: {cmsEditItem.section_name}</h2>
+              <button onClick={() => setCmsEditItem(null)} className="p-2 hover:bg-muted rounded-lg"><X className="w-4 h-4" /></button>
+            </div>
+            <div className="space-y-4">
+              <div><label className="block text-sm font-medium mb-1.5">Content Text</label>
+                <textarea value={cmsForm.content_text} onChange={e => setCmsForm(p => ({ ...p, content_text: e.target.value }))} className="input-field w-full" rows={4} />
+              </div>
+              <div><label className="block text-sm font-medium mb-1.5">Image URL</label>
+                <input value={cmsForm.content_image_url} onChange={e => setCmsForm(p => ({ ...p, content_image_url: e.target.value }))} className="input-field w-full" placeholder="https://..." />
+              </div>
+              <div><label className="block text-sm font-medium mb-1.5">Display Order</label>
+                <input type="number" value={cmsForm.display_order} onChange={e => setCmsForm(p => ({ ...p, display_order: parseInt(e.target.value) || 0 }))} className="input-field w-full" />
+              </div>
+              <label className="flex items-center gap-3 cursor-pointer">
+                <input type="checkbox" checked={cmsForm.is_visible} onChange={e => setCmsForm(p => ({ ...p, is_visible: e.target.checked }))} className="w-4 h-4 rounded border-input accent-primary" />
+                <span className="text-sm font-medium">Visible</span>
+              </label>
+              <div className="flex gap-3 pt-2">
+                <button onClick={() => setCmsEditItem(null)} className="flex-1 py-2.5 rounded-lg border text-sm font-medium hover:bg-muted">Cancel</button>
+                <button onClick={saveCmsEdit} disabled={savingCms} className="flex-1 btn-primary py-2.5 rounded-lg text-sm font-medium flex items-center justify-center gap-2">
+                  {savingCms ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Save className="w-4 h-4" /> Save</>}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* New CMS Block Modal */}
+      {showNewCmsModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-foreground/40" onClick={() => setShowNewCmsModal(false)}>
+          <div className="bg-card rounded-2xl shadow-xl w-full max-w-md p-6 section-reveal max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+            <h2 className="text-lg font-bold mb-4">Add Content Block</h2>
+            <div className="space-y-4">
+              <div><label className="block text-sm font-medium mb-1.5">Page</label>
+                <select value={newCmsForm.page_name} onChange={e => setNewCmsForm(p => ({ ...p, page_name: e.target.value }))} className="input-field w-full">
+                  <option value="home">Home</option><option value="login">Login</option><option value="register">Register</option><option value="terms">Terms</option>
+                </select>
+              </div>
+              <div><label className="block text-sm font-medium mb-1.5">Section Name</label>
+                <input value={newCmsForm.section_name} onChange={e => setNewCmsForm(p => ({ ...p, section_name: e.target.value }))} className="input-field w-full" placeholder="hero_title, feature_1, etc." />
+              </div>
+              <div><label className="block text-sm font-medium mb-1.5">Content Type</label>
+                <select value={newCmsForm.content_type} onChange={e => setNewCmsForm(p => ({ ...p, content_type: e.target.value }))} className="input-field w-full">
+                  <option value="text">Text</option><option value="image">Image</option><option value="html">HTML</option><option value="link">Link</option>
+                </select>
+              </div>
+              <div><label className="block text-sm font-medium mb-1.5">Content</label>
+                <textarea value={newCmsForm.content_text} onChange={e => setNewCmsForm(p => ({ ...p, content_text: e.target.value }))} className="input-field w-full" rows={3} />
+              </div>
+              <div><label className="block text-sm font-medium mb-1.5">Image URL</label>
+                <input value={newCmsForm.content_image_url} onChange={e => setNewCmsForm(p => ({ ...p, content_image_url: e.target.value }))} className="input-field w-full" placeholder="https://..." />
+              </div>
+              <div><label className="block text-sm font-medium mb-1.5">Display Order</label>
+                <input type="number" value={newCmsForm.display_order} onChange={e => setNewCmsForm(p => ({ ...p, display_order: parseInt(e.target.value) || 0 }))} className="input-field w-full" />
+              </div>
+              <div className="flex gap-3 pt-2">
+                <button onClick={() => setShowNewCmsModal(false)} className="flex-1 py-2.5 rounded-lg border text-sm font-medium hover:bg-muted">Cancel</button>
+                <button onClick={createCmsItem} disabled={savingCms} className="flex-1 btn-primary py-2.5 rounded-lg text-sm font-medium flex items-center justify-center gap-2">
+                  {savingCms ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Create'}
                 </button>
               </div>
             </div>

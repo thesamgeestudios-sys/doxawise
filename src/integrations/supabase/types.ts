@@ -44,6 +44,78 @@ export type Database = {
         }
         Relationships: []
       }
+      cms_pages: {
+        Row: {
+          content_image_url: string | null
+          content_link: string | null
+          content_text: string | null
+          content_type: string
+          created_at: string
+          display_order: number
+          id: string
+          is_visible: boolean
+          metadata: Json | null
+          page_name: string
+          section_name: string
+          updated_at: string
+        }
+        Insert: {
+          content_image_url?: string | null
+          content_link?: string | null
+          content_text?: string | null
+          content_type?: string
+          created_at?: string
+          display_order?: number
+          id?: string
+          is_visible?: boolean
+          metadata?: Json | null
+          page_name: string
+          section_name: string
+          updated_at?: string
+        }
+        Update: {
+          content_image_url?: string | null
+          content_link?: string | null
+          content_text?: string | null
+          content_type?: string
+          created_at?: string
+          display_order?: number
+          id?: string
+          is_visible?: boolean
+          metadata?: Json | null
+          page_name?: string
+          section_name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      cms_settings: {
+        Row: {
+          created_at: string
+          id: string
+          setting_key: string
+          setting_type: string
+          setting_value: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          setting_key: string
+          setting_type?: string
+          setting_value?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          setting_key?: string
+          setting_type?: string
+          setting_value?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           account_type: string
