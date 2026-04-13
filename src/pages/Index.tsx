@@ -1,27 +1,38 @@
 import { Link } from 'react-router-dom';
 import { APP_NAME, APP_TAGLINE } from '@/lib/constants';
 import { ArrowRight, Shield, Zap, CreditCard, Users, Clock, Wallet, Globe, TrendingUp, Smartphone, Lock, CheckCircle2, Send, BarChart3 } from 'lucide-react';
+import { useCmsContent } from '@/hooks/useCmsContent';
 import heroBanner from '@/assets/hero-banner.jpg';
 import internationalImg from '@/assets/international-payments.jpg';
 import virtualCardImg from '@/assets/virtual-card.jpg';
 import teamImg from '@/assets/team-payments.jpg';
 
 const Index = () => {
+  const { getText, getImage, getBlock } = useCmsContent('home');
+
   const features = [
-    { icon: Users, title: 'Batch Payments', desc: 'Pay all your staff at once with a single click. Upload CSV or add manually.', color: 'text-[hsl(var(--info))]', bg: 'bg-[hsl(var(--info))]/10' },
-    { icon: Clock, title: 'Auto Scheduling', desc: 'Set pay dates and forget. Payments run automatically every cycle.', color: 'text-[hsl(var(--warning))]', bg: 'bg-[hsl(var(--warning))]/10' },
-    { icon: CreditCard, title: 'Virtual Cards', desc: 'Create virtual Naira & Dollar cards for online payments and subscriptions.', color: 'text-[hsl(var(--purple))]', bg: 'bg-[hsl(var(--purple))]/10' },
-    { icon: Wallet, title: 'Virtual Account', desc: 'Get a dedicated Nigerian virtual account in your business name.', color: 'text-[hsl(var(--success))]', bg: 'bg-[hsl(var(--success))]/10' },
-    { icon: Globe, title: 'International Payments', desc: 'Send and receive money across borders. Support for USD, GBP, EUR, and more.', color: 'text-[hsl(var(--teal))]', bg: 'bg-[hsl(var(--teal))]/10' },
-    { icon: Lock, title: 'Secure & Compliant', desc: 'BVN-verified accounts with bank-grade encryption and security.', color: 'text-primary', bg: 'bg-primary/10' },
+    { icon: Users, title: getText('feature_1_title', 'Batch Payments'), desc: getText('feature_1_desc', 'Pay all your staff at once with a single click. Upload CSV or add manually.'), color: 'text-[hsl(var(--info))]', bg: 'bg-[hsl(var(--info))]/10' },
+    { icon: Clock, title: getText('feature_2_title', 'Auto Scheduling'), desc: getText('feature_2_desc', 'Set pay dates and forget. Payments run automatically every cycle.'), color: 'text-[hsl(var(--warning))]', bg: 'bg-[hsl(var(--warning))]/10' },
+    { icon: CreditCard, title: getText('feature_3_title', 'Virtual Cards'), desc: getText('feature_3_desc', 'Create virtual Naira & Dollar cards for online payments and subscriptions.'), color: 'text-[hsl(var(--purple))]', bg: 'bg-[hsl(var(--purple))]/10' },
+    { icon: Wallet, title: getText('feature_4_title', 'Virtual Account'), desc: getText('feature_4_desc', 'Get a dedicated Nigerian virtual account in your business name.'), color: 'text-[hsl(var(--success))]', bg: 'bg-[hsl(var(--success))]/10' },
+    { icon: Globe, title: getText('feature_5_title', 'International Payments'), desc: getText('feature_5_desc', 'Send and receive money across borders. Support for USD, GBP, EUR, and more.'), color: 'text-[hsl(var(--teal))]', bg: 'bg-[hsl(var(--teal))]/10' },
+    { icon: Lock, title: getText('feature_6_title', 'Secure & Compliant'), desc: getText('feature_6_desc', 'BVN-verified accounts with bank-grade encryption and security.'), color: 'text-primary', bg: 'bg-primary/10' },
   ];
 
   const stats = [
-    { value: '₦2B+', label: 'Processed' },
-    { value: '5,000+', label: 'Businesses' },
-    { value: '99.9%', label: 'Uptime' },
-    { value: '<3s', label: 'Transfer Speed' },
+    { value: getText('stat_1_value', '₦2B+'), label: getText('stat_1_label', 'Processed') },
+    { value: getText('stat_2_value', '5,000+'), label: getText('stat_2_label', 'Businesses') },
+    { value: getText('stat_3_value', '99.9%'), label: getText('stat_3_label', 'Uptime') },
+    { value: getText('stat_4_value', '<3s'), label: getText('stat_4_label', 'Transfer Speed') },
   ];
+
+  const heroTitle = getText('hero_title', APP_TAGLINE);
+  const heroSubtitle = getText('hero_subtitle', 'Automate salary disbursement, create virtual cards, send international payments, and manage your workforce payroll — all from one secure platform.');
+  const heroBadge = getText('hero_badge', "Nigeria's Smart Payment Platform");
+  const heroImg = getImage('hero_image') || heroBanner;
+  const virtualImg = getImage('virtual_card_image') || virtualCardImg;
+  const intlImg = getImage('international_image') || internationalImg;
+  const teamImage = getImage('team_image') || teamImg;
 
   return (
     <div className="min-h-screen bg-background overflow-hidden">
@@ -36,23 +47,23 @@ const Index = () => {
         </div>
       </nav>
 
-      {/* Hero Section - Image Led */}
+      {/* Hero Section */}
       <section className="relative min-h-[90vh] flex items-center">
         <div className="absolute inset-0">
-          <img src={heroBanner} alt="Doxawise payment dashboard" width={1920} height={1080} className="w-full h-full object-cover" />
+          <img src={heroImg} alt="Doxawise payment dashboard" width={1920} height={1080} className="w-full h-full object-cover" />
           <div className="absolute inset-0 bg-gradient-to-r from-[hsl(222,62%,12%)/0.92] via-[hsl(222,62%,18%)/0.85] to-[hsl(262,60%,20%)/0.7]" />
         </div>
         <div className="relative z-10 page-container pt-24 pb-20">
           <div className="max-w-2xl section-reveal">
             <div className="inline-flex items-center gap-2 bg-accent/20 text-accent text-sm font-medium px-4 py-1.5 rounded-full mb-6 backdrop-blur-sm border border-accent/30">
               <Shield className="w-4 h-4" />
-              Nigeria's Smart Payment Platform
+              {heroBadge}
             </div>
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold leading-[1.08] mb-6 text-primary-foreground">
-              {APP_TAGLINE}
+              {heroTitle}
             </h1>
             <p className="text-lg text-primary-foreground/80 max-w-xl leading-relaxed mb-8">
-              Automate salary disbursement, create virtual cards, send international payments, and manage your workforce payroll — all from one secure platform.
+              {heroSubtitle}
             </p>
             <div className="flex flex-wrap gap-4">
               <Link to="/register" className="bg-accent text-accent-foreground px-8 py-3.5 rounded-xl text-base font-semibold inline-flex items-center gap-2 hover:opacity-90 transition-all shadow-lg">
@@ -63,9 +74,9 @@ const Index = () => {
               </Link>
             </div>
             <div className="flex flex-wrap gap-x-6 gap-y-2 mt-8 text-sm text-primary-foreground/70">
-              <span className="flex items-center gap-1.5"><CheckCircle2 className="w-4 h-4 text-accent" /> 0.3% fee, max ₦1,000</span>
-              <span className="flex items-center gap-1.5"><CheckCircle2 className="w-4 h-4 text-accent" /> We never hold your money</span>
-              <span className="flex items-center gap-1.5"><CheckCircle2 className="w-4 h-4 text-accent" /> Instant transfers</span>
+              <span className="flex items-center gap-1.5"><CheckCircle2 className="w-4 h-4 text-accent" /> {getText('hero_check_1', '0.3% fee, max ₦1,000')}</span>
+              <span className="flex items-center gap-1.5"><CheckCircle2 className="w-4 h-4 text-accent" /> {getText('hero_check_2', 'We never hold your money')}</span>
+              <span className="flex items-center gap-1.5"><CheckCircle2 className="w-4 h-4 text-accent" /> {getText('hero_check_3', 'Instant transfers')}</span>
             </div>
           </div>
         </div>
@@ -88,8 +99,8 @@ const Index = () => {
       {/* Features */}
       <section className="page-container py-20 sm:py-28">
         <div className="text-center mb-16 section-reveal">
-          <h2 className="text-3xl sm:text-4xl font-bold mb-4">Everything you need to process payments</h2>
-          <p className="text-lg text-muted-foreground max-w-2xl mx-auto">Powerful tools built for Nigerian businesses to automate payroll, manage funds, and scale operations globally.</p>
+          <h2 className="text-3xl sm:text-4xl font-bold mb-4">{getText('features_title', 'Everything you need to process payments')}</h2>
+          <p className="text-lg text-muted-foreground max-w-2xl mx-auto">{getText('features_subtitle', 'Powerful tools built for Nigerian businesses to automate payroll, manage funds, and scale operations globally.')}</p>
         </div>
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {features.map((f, i) => (
@@ -104,11 +115,11 @@ const Index = () => {
         </div>
       </section>
 
-      {/* Virtual Cards Section - Image Led */}
+      {/* Virtual Cards Section */}
       <section className="relative overflow-hidden">
         <div className="grid lg:grid-cols-2">
           <div className="relative h-64 lg:h-auto">
-            <img src={virtualCardImg} alt="Virtual debit card" width={1280} height={720} loading="lazy" className="w-full h-full object-cover" />
+            <img src={virtualImg} alt="Virtual debit card" width={1280} height={720} loading="lazy" className="w-full h-full object-cover" />
             <div className="absolute inset-0 bg-gradient-to-r from-transparent to-background lg:to-transparent" />
           </div>
           <div className="flex items-center p-8 sm:p-12 lg:p-16">
@@ -116,12 +127,12 @@ const Index = () => {
               <div className="inline-flex items-center gap-2 badge-purple mb-4">
                 <CreditCard className="w-3.5 h-3.5" /> Virtual Cards
               </div>
-              <h2 className="text-3xl sm:text-4xl font-bold mb-4">Create virtual cards in seconds</h2>
+              <h2 className="text-3xl sm:text-4xl font-bold mb-4">{getText('virtual_card_title', 'Create virtual cards in seconds')}</h2>
               <p className="text-muted-foreground leading-relaxed mb-6">
-                Generate Naira or Dollar virtual cards instantly. Use them for online subscriptions, international purchases, and team spending management.
+                {getText('virtual_card_desc', 'Generate Naira or Dollar virtual cards instantly. Use them for online subscriptions, international purchases, and team spending management.')}
               </p>
               <ul className="space-y-3 mb-8">
-                {['NGN & USD card options', 'Fund, block & terminate anytime', 'Secure online payments'].map(item => (
+                {[getText('vc_check_1', 'NGN & USD card options'), getText('vc_check_2', 'Fund, block & terminate anytime'), getText('vc_check_3', 'Secure online payments')].map(item => (
                   <li key={item} className="flex items-center gap-2 text-sm">
                     <CheckCircle2 className="w-4 h-4 text-[hsl(var(--success))] shrink-0" /> {item}
                   </li>
@@ -135,7 +146,7 @@ const Index = () => {
         </div>
       </section>
 
-      {/* International Payments - Image Led */}
+      {/* International Payments */}
       <section className="relative overflow-hidden">
         <div className="grid lg:grid-cols-2">
           <div className="flex items-center p-8 sm:p-12 lg:p-16 order-2 lg:order-1">
@@ -143,12 +154,12 @@ const Index = () => {
               <div className="inline-flex items-center gap-2 badge-info mb-4">
                 <Globe className="w-3.5 h-3.5" /> International Payments
               </div>
-              <h2 className="text-3xl sm:text-4xl font-bold mb-4">Send money across borders</h2>
+              <h2 className="text-3xl sm:text-4xl font-bold mb-4">{getText('intl_title', 'Send money across borders')}</h2>
               <p className="text-muted-foreground leading-relaxed mb-6">
-                Transfer funds internationally with competitive exchange rates. Send money to the US, UK, Europe, and across Africa directly from your Doxawise wallet.
+                {getText('intl_desc', 'Transfer funds internationally with competitive exchange rates. Send money to the US, UK, Europe, and across Africa directly from your Doxawise wallet.')}
               </p>
               <ul className="space-y-3 mb-8">
-                {['Support for USD, GBP, EUR, GHS & more', 'Real-time exchange rates', 'Receive from anywhere in the world'].map(item => (
+                {[getText('intl_check_1', 'Support for USD, GBP, EUR, GHS & more'), getText('intl_check_2', 'Real-time exchange rates'), getText('intl_check_3', 'Receive from anywhere in the world')].map(item => (
                   <li key={item} className="flex items-center gap-2 text-sm">
                     <CheckCircle2 className="w-4 h-4 text-[hsl(var(--success))] shrink-0" /> {item}
                   </li>
@@ -160,23 +171,23 @@ const Index = () => {
             </div>
           </div>
           <div className="relative h-64 lg:h-auto order-1 lg:order-2">
-            <img src={internationalImg} alt="International payments globe" width={1280} height={720} loading="lazy" className="w-full h-full object-cover" />
+            <img src={intlImg} alt="International payments globe" width={1280} height={720} loading="lazy" className="w-full h-full object-cover" />
             <div className="absolute inset-0 bg-gradient-to-l from-transparent to-background lg:to-transparent" />
           </div>
         </div>
       </section>
 
-      {/* Team Payments - Image Led */}
+      {/* Team Payments */}
       <section className="relative">
         <div className="absolute inset-0">
-          <img src={teamImg} alt="Team receiving payments" width={1280} height={720} loading="lazy" className="w-full h-full object-cover" />
+          <img src={teamImage} alt="Team receiving payments" width={1280} height={720} loading="lazy" className="w-full h-full object-cover" />
           <div className="absolute inset-0 bg-gradient-to-r from-[hsl(222,62%,10%)/0.9] to-[hsl(222,62%,10%)/0.7]" />
         </div>
         <div className="relative z-10 page-container py-20 sm:py-28">
           <div className="max-w-xl section-reveal">
-            <h2 className="text-3xl sm:text-4xl font-bold mb-4 text-primary-foreground">Pay your entire team with one click</h2>
+            <h2 className="text-3xl sm:text-4xl font-bold mb-4 text-primary-foreground">{getText('team_title', 'Pay your entire team with one click')}</h2>
             <p className="text-lg text-primary-foreground/80 leading-relaxed mb-8">
-              Add your staff, set their salaries and bank details, then process batch payments instantly. Everyone gets paid simultaneously.
+              {getText('team_desc', 'Add your staff, set their salaries and bank details, then process batch payments instantly. Everyone gets paid simultaneously.')}
             </p>
             <div className="grid grid-cols-3 gap-4 mb-8">
               {[
@@ -202,13 +213,13 @@ const Index = () => {
       <section className="bg-muted/30">
         <div className="page-container py-20 sm:py-28">
           <div className="text-center mb-16 section-reveal">
-            <h2 className="text-3xl sm:text-4xl font-bold mb-4">Get started in 3 steps</h2>
+            <h2 className="text-3xl sm:text-4xl font-bold mb-4">{getText('steps_title', 'Get started in 3 steps')}</h2>
           </div>
           <div className="grid sm:grid-cols-3 gap-8">
             {[
-              { step: '01', title: 'Create Account', desc: 'Sign up with your business details. BVN verification is optional but recommended.' },
-              { step: '02', title: 'Get Virtual Account', desc: 'Receive a dedicated account number in your business name. Fund it via bank transfer.' },
-              { step: '03', title: 'Start Paying', desc: 'Add staff, schedule payments, and process transfers instantly from your dashboard.' },
+              { step: '01', title: getText('step_1_title', 'Create Account'), desc: getText('step_1_desc', 'Sign up with your business details. BVN verification is optional but recommended.') },
+              { step: '02', title: getText('step_2_title', 'Get Virtual Account'), desc: getText('step_2_desc', 'Receive a dedicated account number in your business name. Fund it via bank transfer.') },
+              { step: '03', title: getText('step_3_title', 'Start Paying'), desc: getText('step_3_desc', 'Add staff, schedule payments, and process transfers instantly from your dashboard.') },
             ].map((item, i) => (
               <div key={item.step} className={`text-center section-reveal stagger-${i + 1}`}>
                 <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-4">
@@ -226,8 +237,8 @@ const Index = () => {
       <section className="relative overflow-hidden">
         <div className="absolute inset-0 gradient-card" />
         <div className="page-container py-16 sm:py-20 text-center relative z-10 section-reveal">
-          <h2 className="text-2xl sm:text-3xl font-bold mb-4 text-primary-foreground">Ready to streamline your payroll?</h2>
-          <p className="text-lg text-primary-foreground/80 mb-8 max-w-lg mx-auto">Join businesses across Nigeria using {APP_NAME} for automated, secure batch payment processing.</p>
+          <h2 className="text-2xl sm:text-3xl font-bold mb-4 text-primary-foreground">{getText('cta_title', 'Ready to streamline your payroll?')}</h2>
+          <p className="text-lg text-primary-foreground/80 mb-8 max-w-lg mx-auto">{getText('cta_subtitle', `Join businesses across Nigeria using ${APP_NAME} for automated, secure batch payment processing.`)}</p>
           <Link to="/register" className="bg-accent text-accent-foreground px-8 py-3.5 rounded-xl text-base font-semibold inline-flex items-center gap-2 hover:opacity-90 transition-all shadow-lg">
             Get Started Now <ArrowRight className="w-5 h-5" />
           </Link>
@@ -239,7 +250,7 @@ const Index = () => {
           <div className="grid sm:grid-cols-3 gap-8 mb-8">
             <div>
               <p className="text-xl font-bold text-primary mb-3">{APP_NAME}</p>
-              <p className="text-sm text-muted-foreground leading-relaxed">Smart payment processing platform for Nigerian businesses. We never hold your funds.</p>
+              <p className="text-sm text-muted-foreground leading-relaxed">{getText('footer_desc', 'Smart payment processing platform for Nigerian businesses. We never hold your funds.')}</p>
             </div>
             <div>
               <p className="font-semibold mb-3">Quick Links</p>
