@@ -18,9 +18,12 @@ interface Props {
   senderName?: string;
   senderAccount?: string;
   senderBank?: string;
+  recipientName?: string;
+  recipientAccount?: string;
+  recipientBank?: string;
 }
 
-const TransactionReceipt = ({ transaction, onClose, senderName, senderAccount, senderBank }: Props) => {
+const TransactionReceipt = ({ transaction, onClose, senderName, senderAccount, senderBank, recipientName, recipientAccount, recipientBank }: Props) => {
   const receiptRef = useRef<HTMLDivElement>(null);
 
   const downloadAsImage = async () => {
@@ -52,10 +55,9 @@ const TransactionReceipt = ({ transaction, onClose, senderName, senderAccount, s
   const formattedDate = date.toLocaleDateString('en-NG', { day: 'numeric', month: 'long', year: 'numeric' });
   const formattedTime = date.toLocaleTimeString('en-NG', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
 
-  // Parse description to extract recipient info
+  // Parse description for recipient details
   const desc = transaction.description || '';
-  const isTransfer = desc.toLowerCase().includes('transfer');
-  const isInternational = desc.toLowerCase().includes('international');
+  const parsedRecipient = recipientName || (desc.includes('to ') ? desc.split('to ').pop()?.split(' -')[0] : undefined);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-foreground/50" onClick={onClose}>
@@ -108,64 +110,38 @@ const TransactionReceipt = ({ transaction, onClose, senderName, senderAccount, s
 
           {/* Details */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
-              <span style={{ color: '#94a3b8' }}>Date</span>
-              <span style={{ fontWeight: '500' }}>{formattedDate}</span>
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
-              <span style={{ color: '#94a3b8' }}>Time</span>
-              <span style={{ fontWeight: '500' }}>{formattedTime}</span>
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
-              <span style={{ color: '#94a3b8' }}>Transaction Type</span>
-              <span style={{ fontWeight: '500', textTransform: 'capitalize' }}>{transaction.type}</span>
-            </div>
-            {transaction.description && (
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', gap: '16px' }}>
-                <span style={{ color: '#94a3b8', flexShrink: 0 }}>Description</span>
-                <span style={{ fontWeight: '500', textAlign: 'right' }}>{transaction.description}</span>
-              </div>
-            )}
-            {transaction.reference && (
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', gap: '16px' }}>
-                <span style={{ color: '#94a3b8', flexShrink: 0 }}>Reference</span>
-                <span style={{ fontWeight: '500', fontFamily: 'monospace', fontSize: '11px', textAlign: 'right', wordBreak: 'break-all' }}>{transaction.reference}</span>
-              </div>
-            )}
+            <Row label="Date" value={formattedDate} />
+            <Row label="Time" value={formattedTime} />
+            <Row label="Transaction Type" value={transaction.type} capitalize />
+            {transaction.description && <Row label="Description" value={transaction.description} rightAlign />}
+            {transaction.reference && <Row label="Reference" value={transaction.reference} mono rightAlign />}
 
             {/* Sender info */}
             {senderName && (
               <>
                 <div style={{ height: '1px', background: '#e2e8f0', margin: '4px 0' }} />
-                <div style={{ fontSize: '11px', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '1px', fontWeight: '600' }}>
-                  {transaction.type === 'credit' ? 'Received By' : 'Sent By'}
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
-                  <span style={{ color: '#94a3b8' }}>Name</span>
-                  <span style={{ fontWeight: '500' }}>{senderName}</span>
-                </div>
-                {senderAccount && (
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
-                    <span style={{ color: '#94a3b8' }}>Account</span>
-                    <span style={{ fontWeight: '500', fontFamily: 'monospace' }}>{senderAccount}</span>
-                  </div>
-                )}
-                {senderBank && (
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
-                    <span style={{ color: '#94a3b8' }}>Bank</span>
-                    <span style={{ fontWeight: '500' }}>{senderBank}</span>
-                  </div>
-                )}
+                <SectionHeader label={transaction.type === 'credit' ? 'Sender Details' : 'Sent By'} />
+                <Row label="Name" value={senderName} />
+                {senderAccount && <Row label="Account Number" value={senderAccount} mono />}
+                {senderBank && <Row label="Bank" value={senderBank} />}
+              </>
+            )}
+
+            {/* Recipient info */}
+            {(parsedRecipient || recipientAccount) && (
+              <>
+                <div style={{ height: '1px', background: '#e2e8f0', margin: '4px 0' }} />
+                <SectionHeader label={transaction.type === 'credit' ? 'Received By' : 'Recipient Details'} />
+                {parsedRecipient && <Row label="Name" value={parsedRecipient} />}
+                {recipientAccount && <Row label="Account Number" value={recipientAccount} mono />}
+                {recipientBank && <Row label="Bank" value={recipientBank} />}
               </>
             )}
 
             {transaction.balance_after !== null && (
               <>
                 <div style={{ height: '1px', background: '#e2e8f0', margin: '4px 0' }} />
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
-                  <span style={{ color: '#94a3b8' }}>Balance After</span>
-                  <span style={{ fontWeight: '600' }}>{formatNaira(transaction.balance_after)}</span>
-                </div>
+                <Row label="Balance After" value={formatNaira(transaction.balance_after)} bold />
               </>
             )}
           </div>
@@ -182,5 +158,25 @@ const TransactionReceipt = ({ transaction, onClose, senderName, senderAccount, s
     </div>
   );
 };
+
+const Row = ({ label, value, mono, capitalize, rightAlign, bold }: { label: string; value: string; mono?: boolean; capitalize?: boolean; rightAlign?: boolean; bold?: boolean }) => (
+  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', gap: '16px' }}>
+    <span style={{ color: '#94a3b8', flexShrink: 0 }}>{label}</span>
+    <span style={{
+      fontWeight: bold ? '600' : '500',
+      textAlign: rightAlign ? 'right' : undefined,
+      textTransform: capitalize ? 'capitalize' : undefined,
+      fontFamily: mono ? 'monospace' : undefined,
+      fontSize: mono ? '11px' : undefined,
+      wordBreak: mono ? 'break-all' : undefined,
+    }}>{value}</span>
+  </div>
+);
+
+const SectionHeader = ({ label }: { label: string }) => (
+  <div style={{ fontSize: '11px', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '1px', fontWeight: '600' }}>
+    {label}
+  </div>
+);
 
 export default TransactionReceipt;
