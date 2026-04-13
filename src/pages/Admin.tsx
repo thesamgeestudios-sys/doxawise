@@ -628,34 +628,54 @@ const AdminPanel = () => {
               </div>
             </div>
 
-            {Array.from(new Set(cmsPages.map(c => c.page_name))).map(pageName => (
-              <div key={pageName} className="card-elevated overflow-hidden">
-                <div className="bg-muted/50 px-4 py-3 border-b">
-                  <h3 className="font-semibold capitalize">{pageName} Page</h3>
-                </div>
-                <div className="divide-y">
-                  {cmsPages.filter(c => c.page_name === pageName).map(item => (
-                    <div key={item.id} className="flex items-center justify-between px-4 py-3 hover:bg-muted/30 transition-colors">
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs font-mono bg-muted px-2 py-0.5 rounded">{item.section_name}</span>
-                          <span className="text-xs text-muted-foreground capitalize">{item.content_type}</span>
-                          {!item.is_visible && <span className="text-xs bg-destructive/10 text-destructive px-2 py-0.5 rounded">Hidden</span>}
+            {Array.from(new Set(cmsPages.map(c => c.page_name))).map(pageName => {
+              const pageItems = cmsPages.filter(c => c.page_name === pageName).sort((a, b) => a.display_order - b.display_order);
+              return (
+                <div key={pageName} className="card-elevated overflow-hidden">
+                  <div className="bg-muted/50 px-4 py-3 border-b">
+                    <h3 className="font-semibold capitalize">{pageName} Page</h3>
+                  </div>
+                  <DragDropContext onDragEnd={handleCmsDragEnd}>
+                    <Droppable droppableId={pageName} type={pageName}>
+                      {(provided) => (
+                        <div ref={provided.innerRef} {...provided.droppableProps} className="divide-y">
+                          {pageItems.map((item, index) => (
+                            <Draggable key={item.id} draggableId={item.id} index={index}>
+                              {(provided, snapshot) => (
+                                <div ref={provided.innerRef} {...provided.draggableProps}
+                                  className={`flex items-center justify-between px-4 py-3 hover:bg-muted/30 transition-colors ${snapshot.isDragging ? 'bg-muted shadow-lg' : ''}`}>
+                                  <div className="flex items-center gap-3 min-w-0 flex-1">
+                                    <div {...provided.dragHandleProps} className="cursor-grab text-muted-foreground hover:text-foreground p-1">
+                                      <span className="text-lg">⠿</span>
+                                    </div>
+                                    <div className="min-w-0 flex-1">
+                                      <div className="flex items-center gap-2">
+                                        <span className="text-xs font-mono bg-muted px-2 py-0.5 rounded">{item.section_name}</span>
+                                        <span className="text-xs text-muted-foreground capitalize">{item.content_type}</span>
+                                        {!item.is_visible && <span className="text-xs bg-destructive/10 text-destructive px-2 py-0.5 rounded">Hidden</span>}
+                                      </div>
+                                      <p className="text-sm text-muted-foreground truncate mt-1 max-w-md">{item.content_text || item.content_image_url || '(empty)'}</p>
+                                    </div>
+                                  </div>
+                                  <div className="flex items-center gap-1 shrink-0 ml-4">
+                                    <button onClick={() => moveCmsItem(item, 'up')} className="p-1.5 rounded hover:bg-muted text-muted-foreground text-xs">↑</button>
+                                    <button onClick={() => moveCmsItem(item, 'down')} className="p-1.5 rounded hover:bg-muted text-muted-foreground text-xs">↓</button>
+                                    <button onClick={() => { setCmsEditItem(item); setCmsForm({ content_text: item.content_text || '', content_image_url: item.content_image_url || '', is_visible: item.is_visible, display_order: item.display_order }); }}
+                                      className="p-1.5 rounded hover:bg-primary/10 text-muted-foreground hover:text-primary"><Edit2 className="w-4 h-4" /></button>
+                                    <button onClick={() => deleteCmsItem(item.id)} className="p-1.5 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive"><Trash2 className="w-4 h-4" /></button>
+                                  </div>
+                                </div>
+                              )}
+                            </Draggable>
+                          ))}
+                          {provided.placeholder}
                         </div>
-                        <p className="text-sm text-muted-foreground truncate mt-1 max-w-md">{item.content_text || item.content_image_url || '(empty)'}</p>
-                      </div>
-                      <div className="flex items-center gap-1 shrink-0 ml-4">
-                        <button onClick={() => moveCmsItem(item, 'up')} className="p-1.5 rounded hover:bg-muted text-muted-foreground text-xs">↑</button>
-                        <button onClick={() => moveCmsItem(item, 'down')} className="p-1.5 rounded hover:bg-muted text-muted-foreground text-xs">↓</button>
-                        <button onClick={() => { setCmsEditItem(item); setCmsForm({ content_text: item.content_text || '', content_image_url: item.content_image_url || '', is_visible: item.is_visible, display_order: item.display_order }); }}
-                          className="p-1.5 rounded hover:bg-primary/10 text-muted-foreground hover:text-primary"><Edit2 className="w-4 h-4" /></button>
-                        <button onClick={() => deleteCmsItem(item.id)} className="p-1.5 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive"><Trash2 className="w-4 h-4" /></button>
-                      </div>
-                    </div>
-                  ))}
+                      )}
+                    </Droppable>
+                  </DragDropContext>
                 </div>
-              </div>
-            ))}
+              );
+            })}
 
             {cmsPages.length === 0 && (
               <div className="card-elevated p-12 text-center text-muted-foreground">
