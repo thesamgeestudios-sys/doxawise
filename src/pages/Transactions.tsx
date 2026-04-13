@@ -142,15 +142,24 @@ const Transactions = () => {
         </div>
       </div>
 
-      {selectedTx && (
-        <TransactionReceipt
-          transaction={selectedTx}
-          onClose={() => setSelectedTx(null)}
-          senderName={profile ? `${profile.first_name} ${profile.last_name}` : undefined}
-          senderAccount={profile?.virtual_account_number || undefined}
-          senderBank={profile?.virtual_account_bank || undefined}
-        />
-      )}
+      {selectedTx && (() => {
+        // Parse recipient from description (format: "Transfer to Name - BankName")
+        const desc = selectedTx.description || '';
+        const recipientMatch = desc.match(/(?:Transfer|transfer)\s+to\s+(.+?)(?:\s*-\s*(.+))?$/);
+        const recipientName = recipientMatch?.[1]?.trim();
+        const recipientBank = recipientMatch?.[2]?.trim();
+        return (
+          <TransactionReceipt
+            transaction={selectedTx}
+            onClose={() => setSelectedTx(null)}
+            senderName={profile ? `${profile.first_name} ${profile.last_name}` : undefined}
+            senderAccount={profile?.virtual_account_number || undefined}
+            senderBank={profile?.virtual_account_bank || undefined}
+            recipientName={recipientName}
+            recipientBank={recipientBank}
+          />
+        );
+      })()}
     </DashboardLayout>
   );
 };
