@@ -259,6 +259,25 @@ const AdminPanel = () => {
     setSavingCms(false);
   };
 
+  const handleCmsDragEnd = async (result: DropResult) => {
+    if (!result.destination) return;
+    const pageName = result.type;
+    const pageItems = cmsPages.filter(c => c.page_name === pageName).sort((a, b) => a.display_order - b.display_order);
+    const [moved] = pageItems.splice(result.source.index, 1);
+    pageItems.splice(result.destination.index, 0, moved);
+    // Optimistic update
+    const updatedAll = cmsPages.map(c => {
+      if (c.page_name !== pageName) return c;
+      const idx = pageItems.findIndex(p => p.id === c.id);
+      return { ...c, display_order: idx >= 0 ? idx : c.display_order };
+    });
+    setCmsPages(updatedAll);
+    // Persist
+    await Promise.all(pageItems.map((item, idx) =>
+      supabase.from('cms_pages').update({ display_order: idx }).eq('id', item.id)
+    ));
+  };
+
   const moveCmsItem = async (item: any, direction: 'up' | 'down') => {
     const newOrder = direction === 'up' ? item.display_order - 1 : item.display_order + 1;
     await supabase.from('cms_pages').update({ display_order: newOrder }).eq('id', item.id);
