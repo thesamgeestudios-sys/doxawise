@@ -4,7 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import PasswordInput from '@/components/PasswordInput';
 import { APP_NAME } from '@/lib/constants';
 import { toast } from 'sonner';
-import { Loader2, ArrowRight, Building2 } from 'lucide-react';
+import { Loader2, ArrowRight, Building2, GraduationCap, CheckCircle2 } from 'lucide-react';
 
 const Register = () => {
   const navigate = useNavigate();
@@ -18,6 +18,7 @@ const Register = () => {
     bvn: '',
     password: '',
     confirmPassword: '',
+    platformMode: 'company' as 'company' | 'school',
     agreedToTerms: false,
   });
 
@@ -50,7 +51,9 @@ const Register = () => {
           last_name: form.lastName,
           phone: form.phone,
           bvn: form.bvn,
+          platform_mode: form.platformMode,
         },
+        emailRedirectTo: `${window.location.origin}/email-confirmed`,
       },
     });
     setLoading(false);
@@ -59,7 +62,7 @@ const Register = () => {
       toast.error(error.message);
     } else {
       toast.success('Registration successful! Please check your email to verify your account.');
-      navigate('/login');
+      navigate('/registration-success');
     }
   };
 
@@ -96,12 +99,38 @@ const Register = () => {
             <h1 className="text-2xl font-bold text-primary">{APP_NAME}</h1>
           </div>
           <h2 className="text-2xl font-bold mb-2">Create your account</h2>
-          <p className="text-muted-foreground mb-8">Fill in your business and personal details</p>
+          <p className="text-muted-foreground mb-8">Choose your platform mode and enter your account details</p>
 
           <form onSubmit={handleRegister} className="space-y-5">
             <div>
-              <label className="block text-sm font-medium mb-2">Business / Company Name</label>
-              <input value={form.businessName} onChange={update('businessName')} required placeholder="Acme Nigeria Ltd" className="input-field w-full" />
+              <label className="block text-sm font-medium mb-3">Choose your platform mode</label>
+              <div className="grid sm:grid-cols-2 gap-3">
+                {[
+                  { value: 'company', title: 'Company / Organisation', desc: 'Staff, HR, salaries, payments', icon: Building2 },
+                  { value: 'school', title: 'School', desc: 'Students, classes, fees, staff payroll', icon: GraduationCap },
+                ].map(option => {
+                  const Icon = option.icon;
+                  const active = form.platformMode === option.value;
+                  return (
+                    <button
+                      key={option.value}
+                      type="button"
+                      onClick={() => setForm(prev => ({ ...prev, platformMode: option.value as 'company' | 'school' }))}
+                      className={`relative text-left p-4 rounded-xl border-2 transition-all ${active ? 'border-primary bg-primary/5 shadow-sm' : 'border-border hover:border-primary/40 hover:bg-muted/30'}`}
+                    >
+                      {active && <CheckCircle2 className="absolute right-3 top-3 w-5 h-5 text-primary" />}
+                      <Icon className="w-8 h-8 text-primary mb-3" />
+                      <p className="font-semibold pr-6">{option.title}</p>
+                      <p className="text-xs text-muted-foreground mt-1">{option.desc}</p>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-2">{form.platformMode === 'school' ? 'School Name' : 'Business / Company Name'}</label>
+              <input value={form.businessName} onChange={update('businessName')} required placeholder={form.platformMode === 'school' ? 'Bright Future Academy' : 'Acme Nigeria Ltd'} className="input-field w-full" />
             </div>
 
             <div className="grid grid-cols-2 gap-4">
