@@ -7,6 +7,7 @@ import { Wallet, Users, CreditCard, TrendingUp, Copy, CheckCircle2, Loader2, Shi
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
+import { usePlatformAccess } from '@/hooks/usePlatformAccess';
 
 interface Profile {
   business_name: string;
@@ -32,6 +33,7 @@ interface Transaction {
 
 const Dashboard = () => {
   const { user } = useAuth();
+  const { mode, access, roleLabel, organizationId } = usePlatformAccess();
   const navigate = useNavigate();
   const [copied, setCopied] = useState(false);
   const [profile, setProfile] = useState<Profile | null>(null);
@@ -39,6 +41,7 @@ const Dashboard = () => {
   const [staffCount, setStaffCount] = useState(0);
   const [pendingPayments, setPendingPayments] = useState(0);
   const [totalDisbursed, setTotalDisbursed] = useState(0);
+  const [schoolStats, setSchoolStats] = useState({ students: 0, feesCollected: 0 });
   const [loading, setLoading] = useState(true);
   const [creatingAccount, setCreatingAccount] = useState(false);
   const [verifyingBvn, setVerifyingBvn] = useState(false);
@@ -49,11 +52,13 @@ const Dashboard = () => {
 
   const loadData = async () => {
     setLoading(true);
-    const [profileRes, txRes, staffRes, paymentsRes] = await Promise.all([
+    const [profileRes, txRes, staffRes, paymentsRes, studentsRes, feesRes] = await Promise.all([
       supabase.from('profiles').select('*').eq('user_id', user!.id).single(),
       supabase.from('transactions').select('*').eq('user_id', user!.id).order('created_at', { ascending: false }).limit(10),
-      supabase.from('staff').select('id', { count: 'exact' }).eq('user_id', user!.id),
-      supabase.from('scheduled_payments').select('*').eq('user_id', user!.id),
+      supabase.from('staff').select('id', { count: 'exact' }).eq('user_id', organizationId || user!.id),
+      supabase.from('scheduled_payments').select('*').eq('user_id', organizationId || user!.id),
+      supabase.from('students').select('id', { count: 'exact' }).eq('organization_user_id', organizationId || user!.id),
+      supabase.from('student_fee_payments').select('amount').eq('organization_user_id', organizationId || user!.id),
     ]);
 
     if (profileRes.data) setProfile(profileRes.data as unknown as Profile);
@@ -64,6 +69,7 @@ const Dashboard = () => {
       setPendingPayments(paymentsRes.data.filter((p: any) => p.status === 'pending').length);
       setTotalDisbursed(paymentsRes.data.filter((p: any) => p.status === 'completed').reduce((sum: number, p: any) => sum + Number(p.amount), 0));
     }
+    setSchoolStats({ students: studentsRes.count || 0, feesCollected: (feesRes.data || []).reduce((sum: number, p: any) => sum + Number(p.amount || 0), 0) });
     setLoading(false);
   };
 
@@ -130,7 +136,7 @@ const Dashboard = () => {
       <div className="space-y-6">
         <div className="section-reveal">
           <h1 className="text-2xl sm:text-3xl font-bold">Welcome back, {profile?.first_name || user?.user_metadata?.first_name || 'there'}!</h1>
-          <p className="text-muted-foreground mt-1">{businessName}</p>
+          <p className="text-muted-foreground mt-1">{businessName} • {roleLabel} • {mode === 'school' ? 'School Management' : 'Company / Organisation'}</p>
         </div>
 
         {/* BVN Verification Banner */}
@@ -229,12 +235,12 @@ const Dashboard = () => {
           <div className="stat-card section-reveal stagger-3 border-l-4 border-l-[hsl(var(--warning))]">
             <CreditCard className="w-5 h-5 text-[hsl(var(--warning))] mb-3" />
             <p className="text-2xl font-bold">{pendingPayments}</p>
-            <p className="text-sm text-muted-foreground mt-1">Pending Payments</p>
+            <p className="text-sm text-muted-foreground mt-1">{mode === 'school' ? 'Students' : 'Pending Payments'}</p>
           </div>
           <div className="stat-card section-reveal stagger-4 border-l-4 border-l-[hsl(var(--success))]">
             <TrendingUp className="w-5 h-5 text-[hsl(var(--success))] mb-3" />
             <p className="text-2xl font-bold">{formatNaira(totalDisbursed)}</p>
-            <p className="text-sm text-muted-foreground mt-1">Total Disbursed</p>
+            <p className="text-sm text-muted-foreground mt-1">{mode === 'school' ? 'Fees Collected' : 'Total Salary Paid'}</p>
           </div>
         </div>
 
