@@ -14,6 +14,12 @@ interface Transaction {
   reference: string | null;
   created_at: string;
   balance_after: number | null;
+  sender_name?: string | null;
+  sender_account?: string | null;
+  sender_bank?: string | null;
+  receiver_name?: string | null;
+  receiver_account?: string | null;
+  receiver_bank?: string | null;
 }
 
 const Transactions = () => {
@@ -153,10 +159,11 @@ const Transactions = () => {
             transaction={selectedTx}
             onClose={() => setSelectedTx(null)}
             senderName={profile ? `${profile.first_name} ${profile.last_name}` : undefined}
-            senderAccount={profile?.virtual_account_number || undefined}
-            senderBank={profile?.virtual_account_bank || undefined}
-            recipientName={recipientName}
-            recipientBank={recipientBank}
+            senderAccount={selectedTx.sender_account || profile?.virtual_account_number || undefined}
+            senderBank={selectedTx.sender_bank || profile?.virtual_account_bank || undefined}
+            recipientName={selectedTx.receiver_name || recipientName}
+            recipientBank={selectedTx.receiver_bank || recipientBank}
+            recipientAccount={selectedTx.receiver_account || undefined}
           />
         );
       })()}
