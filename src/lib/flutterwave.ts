@@ -40,6 +40,17 @@ export const flutterwaveApi = {
     payment_id?: string;
   }) => callEdgeFunction("initiate-transfer", params),
 
+  processTransfer: (params: {
+    account_bank: string;
+    account_number: string;
+    amount: number;
+    currency: string;
+    narration: string;
+    reference: string;
+    recipient_name?: string;
+    payment_id?: string;
+  }) => callEdgeFunction("process-transfer", params),
+
   batchTransfer: (transfers: Array<{
     account_bank: string;
     account_number: string;

@@ -153,17 +153,21 @@ const Payments = () => {
     setProcessing(payment.id);
     const bankObj = banks.find(b => b.name === payment.bank_name);
 
+      const reference = `DXW-SCH-${payment.id}-${Date.now()}`;
     try {
-      const result = await flutterwaveApi.initiateTransfer({
+      const result = await flutterwaveApi.processTransfer({
         account_bank: bankObj?.code || payment.bank_name,
         account_number: payment.account_number,
         amount: payment.amount,
+        currency: 'NGN',
+        narration: `Scheduled salary payment to ${payment.recipient_name}`,
+        reference,
         recipient_name: payment.recipient_name,
         payment_id: payment.id,
       });
 
       if (result.success) {
-        toast.success('Payment processed successfully!');
+        toast.success('Payment submitted successfully. Status will update automatically.');
         loadPayments();
       } else {
         toast.error(result.message || 'Transfer failed');

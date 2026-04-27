@@ -1,5 +1,6 @@
 export const APP_NAME = "Doxawise";
-export const APP_TAGLINE = "Smart Payment Processing for Nigerian Businesses";
+export const APP_TAGLINE = "Enterprise payments, HR, and school management";
+export const SITE_URL = "https://doxawise.vercel.app";
 export const TRANSACTION_FEE_PERCENT = 0.3;
 export const TRANSACTION_FEE_CAP_NAIRA = 1000;
 export const CURRENCY = "NGN";

@@ -116,6 +116,177 @@ export type Database = {
         }
         Relationships: []
       }
+      hr_announcements: {
+        Row: {
+          audience: string
+          created_at: string
+          created_by: string
+          id: string
+          message: string
+          organization_user_id: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          audience?: string
+          created_at?: string
+          created_by: string
+          id?: string
+          message: string
+          organization_user_id: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          audience?: string
+          created_at?: string
+          created_by?: string
+          id?: string
+          message?: string
+          organization_user_id?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      hr_messages: {
+        Row: {
+          created_at: string
+          id: string
+          is_read: boolean
+          message: string
+          organization_user_id: string
+          recipient_user_id: string | null
+          sender_user_id: string
+          staff_id: string | null
+          subject: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_read?: boolean
+          message: string
+          organization_user_id: string
+          recipient_user_id?: string | null
+          sender_user_id: string
+          staff_id?: string | null
+          subject: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_read?: boolean
+          message?: string
+          organization_user_id?: string
+          recipient_user_id?: string | null
+          sender_user_id?: string
+          staff_id?: string | null
+          subject?: string
+        }
+        Relationships: []
+      }
+      leave_requests: {
+        Row: {
+          created_at: string
+          end_date: string
+          id: string
+          leave_type: string
+          organization_user_id: string
+          reason: string | null
+          requester_user_id: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+          staff_id: string | null
+          start_date: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          end_date: string
+          id?: string
+          leave_type?: string
+          organization_user_id: string
+          reason?: string | null
+          requester_user_id: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          staff_id?: string | null
+          start_date: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          end_date?: string
+          id?: string
+          leave_type?: string
+          organization_user_id?: string
+          reason?: string | null
+          requester_user_id?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          staff_id?: string | null
+          start_date?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      organization_roles: {
+        Row: {
+          created_at: string
+          department: string | null
+          id: string
+          is_active: boolean
+          organization_user_id: string
+          platform_mode: string
+          role: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          department?: string | null
+          id?: string
+          is_active?: boolean
+          organization_user_id: string
+          platform_mode?: string
+          role: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          department?: string | null
+          id?: string
+          is_active?: boolean
+          organization_user_id?: string
+          platform_mode?: string
+          role?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      platform_creators: {
+        Row: {
+          created_at: string
+          email: string
+          id: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          id?: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           account_type: string
@@ -129,7 +300,9 @@ export type Database = {
           flutterwave_customer_id: string | null
           id: string
           last_name: string
+          onboarding_completed: boolean
           phone: string | null
+          platform_mode: string
           updated_at: string
           user_id: string
           virtual_account_bank: string | null
@@ -149,7 +322,9 @@ export type Database = {
           flutterwave_customer_id?: string | null
           id?: string
           last_name: string
+          onboarding_completed?: boolean
           phone?: string | null
+          platform_mode?: string
           updated_at?: string
           user_id: string
           virtual_account_bank?: string | null
@@ -169,7 +344,9 @@ export type Database = {
           flutterwave_customer_id?: string | null
           id?: string
           last_name?: string
+          onboarding_completed?: boolean
           phone?: string | null
+          platform_mode?: string
           updated_at?: string
           user_id?: string
           virtual_account_bank?: string | null
@@ -185,14 +362,18 @@ export type Database = {
           amount: number
           bank_name: string
           created_at: string
+          currency: string
           failure_reason: string | null
           fee: number
           flutterwave_ref: string | null
           id: string
+          processed_at: string | null
           recipient_name: string
+          reference: string | null
           scheduled_date: string
           staff_id: string | null
           status: string
+          transfer_id: string | null
           updated_at: string
           user_id: string
         }
@@ -201,14 +382,18 @@ export type Database = {
           amount: number
           bank_name: string
           created_at?: string
+          currency?: string
           failure_reason?: string | null
           fee?: number
           flutterwave_ref?: string | null
           id?: string
+          processed_at?: string | null
           recipient_name: string
+          reference?: string | null
           scheduled_date: string
           staff_id?: string | null
           status?: string
+          transfer_id?: string | null
           updated_at?: string
           user_id: string
         }
@@ -217,14 +402,18 @@ export type Database = {
           amount?: number
           bank_name?: string
           created_at?: string
+          currency?: string
           failure_reason?: string | null
           fee?: number
           flutterwave_ref?: string | null
           id?: string
+          processed_at?: string | null
           recipient_name?: string
+          reference?: string | null
           scheduled_date?: string
           staff_id?: string | null
           status?: string
+          transfer_id?: string | null
           updated_at?: string
           user_id?: string
         }
@@ -238,16 +427,58 @@ export type Database = {
           },
         ]
       }
+      school_classes: {
+        Row: {
+          class_name: string
+          created_at: string
+          id: string
+          level: string | null
+          organization_user_id: string
+          teacher_name: string | null
+          teacher_user_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          class_name: string
+          created_at?: string
+          id?: string
+          level?: string | null
+          organization_user_id: string
+          teacher_name?: string | null
+          teacher_user_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          class_name?: string
+          created_at?: string
+          id?: string
+          level?: string | null
+          organization_user_id?: string
+          teacher_name?: string | null
+          teacher_user_id?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       staff: {
         Row: {
           account_number: string
           bank_name: string
           created_at: string
+          department: string | null
+          email: string | null
+          employment_status: string
           full_name: string
           id: string
           is_active: boolean | null
+          job_title: string | null
+          notes: string | null
+          onboarding_status: string
           pay_day: number
+          phone: string | null
           salary: number
+          staff_role: string | null
+          start_date: string | null
           updated_at: string
           user_id: string
         }
@@ -255,11 +486,20 @@ export type Database = {
           account_number: string
           bank_name: string
           created_at?: string
+          department?: string | null
+          email?: string | null
+          employment_status?: string
           full_name: string
           id?: string
           is_active?: boolean | null
+          job_title?: string | null
+          notes?: string | null
+          onboarding_status?: string
           pay_day?: number
+          phone?: string | null
           salary?: number
+          staff_role?: string | null
+          start_date?: string | null
           updated_at?: string
           user_id: string
         }
@@ -267,13 +507,160 @@ export type Database = {
           account_number?: string
           bank_name?: string
           created_at?: string
+          department?: string | null
+          email?: string | null
+          employment_status?: string
           full_name?: string
           id?: string
           is_active?: boolean | null
+          job_title?: string | null
+          notes?: string | null
+          onboarding_status?: string
           pay_day?: number
+          phone?: string | null
           salary?: number
+          staff_role?: string | null
+          start_date?: string | null
           updated_at?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      staff_queries: {
+        Row: {
+          created_at: string
+          details: string
+          id: string
+          issued_by: string
+          organization_user_id: string
+          response: string | null
+          severity: string
+          staff_id: string
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          details: string
+          id?: string
+          issued_by: string
+          organization_user_id: string
+          response?: string | null
+          severity?: string
+          staff_id: string
+          status?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          details?: string
+          id?: string
+          issued_by?: string
+          organization_user_id?: string
+          response?: string | null
+          severity?: string
+          staff_id?: string
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      student_fee_payments: {
+        Row: {
+          amount: number
+          created_at: string
+          id: string
+          notes: string | null
+          organization_user_id: string
+          paid_at: string
+          payment_method: string | null
+          payment_status: string
+          recorded_by: string
+          session_year: string | null
+          student_id: string
+          term: string | null
+        }
+        Insert: {
+          amount?: number
+          created_at?: string
+          id?: string
+          notes?: string | null
+          organization_user_id: string
+          paid_at?: string
+          payment_method?: string | null
+          payment_status?: string
+          recorded_by: string
+          session_year?: string | null
+          student_id: string
+          term?: string | null
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          id?: string
+          notes?: string | null
+          organization_user_id?: string
+          paid_at?: string
+          payment_method?: string | null
+          payment_status?: string
+          recorded_by?: string
+          session_year?: string | null
+          student_id?: string
+          term?: string | null
+        }
+        Relationships: []
+      }
+      students: {
+        Row: {
+          admission_number: string | null
+          class_id: string | null
+          created_at: string
+          fee_status: string
+          first_name: string
+          guardian_email: string | null
+          guardian_name: string | null
+          guardian_phone: string | null
+          id: string
+          last_name: string
+          organization_user_id: string
+          outstanding_balance: number
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          admission_number?: string | null
+          class_id?: string | null
+          created_at?: string
+          fee_status?: string
+          first_name: string
+          guardian_email?: string | null
+          guardian_name?: string | null
+          guardian_phone?: string | null
+          id?: string
+          last_name: string
+          organization_user_id: string
+          outstanding_balance?: number
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          admission_number?: string | null
+          class_id?: string | null
+          created_at?: string
+          fee_status?: string
+          first_name?: string
+          guardian_email?: string | null
+          guardian_name?: string | null
+          guardian_phone?: string | null
+          id?: string
+          last_name?: string
+          organization_user_id?: string
+          outstanding_balance?: number
+          status?: string
+          updated_at?: string
         }
         Relationships: []
       }
@@ -350,7 +737,14 @@ export type Database = {
           created_at: string
           description: string | null
           id: string
+          receiver_account: string | null
+          receiver_bank: string | null
+          receiver_name: string | null
           reference: string | null
+          sender_account: string | null
+          sender_bank: string | null
+          sender_name: string | null
+          status: string
           type: string
           user_id: string
         }
@@ -360,7 +754,14 @@ export type Database = {
           created_at?: string
           description?: string | null
           id?: string
+          receiver_account?: string | null
+          receiver_bank?: string | null
+          receiver_name?: string | null
           reference?: string | null
+          sender_account?: string | null
+          sender_bank?: string | null
+          sender_name?: string | null
+          status?: string
           type: string
           user_id: string
         }
@@ -370,7 +771,14 @@ export type Database = {
           created_at?: string
           description?: string | null
           id?: string
+          receiver_account?: string | null
+          receiver_bank?: string | null
+          receiver_name?: string | null
           reference?: string | null
+          sender_account?: string | null
+          sender_bank?: string | null
+          sender_name?: string | null
+          status?: string
           type?: string
           user_id?: string
         }
@@ -453,6 +861,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      has_org_role: {
+        Args: {
+          _organization_user_id: string
+          _roles: string[]
+          _user_id: string
+        }
+        Returns: boolean
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -460,6 +876,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_platform_creator: { Args: { _user_id: string }; Returns: boolean }
     }
     Enums: {
       app_role: "admin" | "user"

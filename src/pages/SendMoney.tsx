@@ -65,12 +65,14 @@ const SendMoney = () => {
 
     setSending(true);
     try {
-      const result = await flutterwaveApi.initiateTransfer({
+      const result = await flutterwaveApi.processTransfer({
         account_bank: form.bankCode,
         account_number: form.accountNumber,
         amount,
+        currency: 'NGN',
+        reference: `DXW-SEND-${Date.now()}`,
         recipient_name: form.recipientName,
-        narration: form.narration || undefined,
+        narration: form.narration || `Transfer to ${form.recipientName}`,
       });
       if (result.success) {
         toast.success(`${formatNaira(amount)} sent to ${form.recipientName} successfully!`);

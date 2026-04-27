@@ -7,20 +7,11 @@ import {
   FileText, ChevronDown, Wallet, Globe, Shield, Banknote
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
-
-const navItems = [
-  { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
-  { to: '/dashboard/staff', icon: Users, label: 'Staff' },
-  { to: '/dashboard/payments', icon: CreditCard, label: 'Payments' },
-  { to: '/dashboard/send', icon: Banknote, label: 'Send Money' },
-  { to: '/dashboard/international', icon: Globe, label: 'International' },
-  { to: '/dashboard/cards', icon: Wallet, label: 'Cards' },
-  { to: '/dashboard/transactions', icon: FileText, label: 'Transactions' },
-  { to: '/dashboard/settings', icon: Settings, label: 'Settings' },
-];
+import { usePlatformAccess } from '@/hooks/usePlatformAccess';
 
 const DashboardLayout = ({ children }: { children: ReactNode }) => {
   const { user, signOut } = useAuth();
+  const { mode, access, roleLabel } = usePlatformAccess();
   const location = useLocation();
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -35,6 +26,18 @@ const DashboardLayout = ({ children }: { children: ReactNode }) => {
 
   const businessName = user?.user_metadata?.business_name || 'My Business';
   const initials = (user?.user_metadata?.first_name?.[0] || '') + (user?.user_metadata?.last_name?.[0] || '');
+
+  const navItems = [
+    { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard', show: true },
+    { to: '/dashboard/staff', icon: Users, label: mode === 'school' ? 'Staff & HR' : 'Staff & HR', show: access.isHr || access.isDirector || access.isLimitedStaff },
+    { to: '/dashboard/students', icon: Users, label: 'Students & Fees', show: mode === 'school' && (access.isBursar || access.isDirector) },
+    { to: '/dashboard/payments', icon: CreditCard, label: mode === 'school' ? 'Salary Payroll' : 'Payroll', show: access.isFinance },
+    { to: '/dashboard/send', icon: Banknote, label: 'Send Money', show: access.isFinance },
+    { to: '/dashboard/international', icon: Globe, label: 'International', show: access.isFinance },
+    { to: '/dashboard/cards', icon: Wallet, label: 'Cards', show: access.isFinance },
+    { to: '/dashboard/transactions', icon: FileText, label: 'Transactions', show: access.isFinance || access.isBursar },
+    { to: '/dashboard/settings', icon: Settings, label: 'Settings', show: access.isDirector },
+  ].filter(item => item.show);
 
   const handleSignOut = async () => {
     await signOut();
@@ -81,7 +84,7 @@ const DashboardLayout = ({ children }: { children: ReactNode }) => {
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-sm font-medium text-sidebar-foreground truncate">{businessName}</p>
-            <p className="text-xs text-sidebar-foreground/60 truncate">{user?.email}</p>
+            <p className="text-xs text-sidebar-foreground/60 truncate">{roleLabel} • {user?.email}</p>
           </div>
         </div>
         <button
