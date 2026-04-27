@@ -96,6 +96,18 @@ serve(async (req) => {
         description: `Transfer to ${recipient_name || account_number} (Fee: ₦${fee.toFixed(2)})`,
         reference,
         balance_after: newBalance,
+        sender_name: profile.business_name || `${profile.first_name || ""} ${profile.last_name || ""}`.trim(),
+        sender_account: profile.virtual_account_number || "",
+        sender_bank: profile.virtual_account_bank || "",
+        receiver_name: recipient_name || "",
+        receiver_account: account_number,
+        receiver_bank: account_bank,
+        status: "completed",
+        receipt_status: "generated",
+        receipt_generated_at: new Date().toISOString(),
+        payment_method: "Bank Transfer",
+        business_name: profile.business_name || `${profile.first_name || ""} ${profile.last_name || ""}`.trim(),
+        contact_info: profile.phone || user.email || "",
       });
 
       if (payment_id) {
