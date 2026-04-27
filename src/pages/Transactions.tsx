@@ -14,6 +14,16 @@ interface Transaction {
   reference: string | null;
   created_at: string;
   balance_after: number | null;
+  status?: string | null;
+  receipt_id?: string | null;
+  receipt_status?: string | null;
+  receipt_generated_at?: string | null;
+  receipt_pdf_url?: string | null;
+  receipt_image_url?: string | null;
+  payment_method?: string | null;
+  business_name?: string | null;
+  business_address?: string | null;
+  contact_info?: string | null;
   sender_name?: string | null;
   sender_account?: string | null;
   sender_bank?: string | null;
@@ -28,6 +38,7 @@ const Transactions = () => {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<'all' | 'credit' | 'debit'>('all');
   const [selectedTx, setSelectedTx] = useState<Transaction | null>(null);
+  const [autoDownload, setAutoDownload] = useState<'pdf' | 'jpg' | null>(null);
   const [profile, setProfile] = useState<any>(null);
 
   useEffect(() => {
@@ -127,13 +138,32 @@ const Transactions = () => {
                       </p>
                     </div>
                   </div>
-                  <div className="text-right shrink-0 ml-4">
+                  <div className="flex shrink-0 items-center gap-3 ml-4">
+                    <div className="hidden sm:flex items-center gap-2">
+                      <button
+                        onClick={(e) => { e.stopPropagation(); setSelectedTx(tx); setAutoDownload('pdf'); }}
+                        className="inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-xs font-medium hover:bg-muted transition-colors"
+                      >
+                        <Download className="w-3.5 h-3.5" /> PDF
+                      </button>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); setSelectedTx(tx); setAutoDownload('jpg'); }}
+                        className="inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-xs font-medium hover:bg-muted transition-colors"
+                      >
+                        JPG
+                      </button>
+                    </div>
+                    <div className="text-right">
                     <p className={`font-semibold tabular-nums ${tx.type === 'credit' ? 'text-[hsl(var(--success))]' : 'text-destructive'}`}>
                       {tx.type === 'credit' ? '+' : '-'}{formatNaira(tx.amount)}
                     </p>
                     {tx.balance_after !== null && (
                       <p className="text-xs text-muted-foreground">Bal: {formatNaira(tx.balance_after)}</p>
                     )}
+                      {tx.receipt_status && tx.receipt_status !== 'generated' && (
+                        <p className="text-xs text-muted-foreground">Receipt pending</p>
+                      )}
+                    </div>
                   </div>
                 </div>
               ))}
@@ -157,13 +187,17 @@ const Transactions = () => {
         return (
           <TransactionReceipt
             transaction={selectedTx}
-            onClose={() => setSelectedTx(null)}
-            senderName={profile ? `${profile.first_name} ${profile.last_name}` : undefined}
+            onClose={() => { setSelectedTx(null); setAutoDownload(null); }}
+            senderName={selectedTx.sender_name || (profile ? (profile.business_name || `${profile.first_name} ${profile.last_name}`.trim()) : undefined)}
             senderAccount={selectedTx.sender_account || profile?.virtual_account_number || undefined}
             senderBank={selectedTx.sender_bank || profile?.virtual_account_bank || undefined}
             recipientName={selectedTx.receiver_name || recipientName}
             recipientBank={selectedTx.receiver_bank || recipientBank}
             recipientAccount={selectedTx.receiver_account || undefined}
+            businessName={profile?.business_name || undefined}
+            contactInfo={profile?.phone || user?.email || undefined}
+            autoDownload={autoDownload}
+            onAutoDownloadComplete={() => setAutoDownload(null)}
           />
         );
       })()}

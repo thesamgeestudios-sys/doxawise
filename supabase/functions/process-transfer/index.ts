@@ -104,6 +104,11 @@ serve(async (req) => {
         receiver_account: account_number,
         receiver_bank: account_bank,
         status: "processing",
+        receipt_status: "generated",
+        receipt_generated_at: new Date().toISOString(),
+        payment_method: "Bank Transfer",
+        business_name: profile.business_name || `${profile.first_name || ""} ${profile.last_name || ""}`.trim(),
+        contact_info: profile.phone || user.email || "",
       });
       if (payment_id) {
         await adminClient.from("scheduled_payments").update({ status: "processing", reference, transfer_id: transferId, flutterwave_ref: transferId, processed_at: new Date().toISOString() }).eq("id", payment_id);

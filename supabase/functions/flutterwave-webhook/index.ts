@@ -153,6 +153,11 @@ serve(async (req) => {
         receiver_account: profile.virtual_account_number || "",
         receiver_bank: profile.virtual_account_bank || "",
         status: "completed",
+        receipt_status: "generated",
+        receipt_generated_at: new Date().toISOString(),
+        payment_method: payload.data?.payment_type || "Bank Transfer",
+        business_name: profile.business_name || `${profile.first_name || ""} ${profile.last_name || ""}`.trim(),
+        contact_info: profile.phone || verifyData.data?.customer?.email || "",
       });
 
       console.log(`Credited ${verifiedAmount} to user ${profile.user_id}. New balance: ${newBalance}`);
