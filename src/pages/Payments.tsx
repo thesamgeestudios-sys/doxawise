@@ -155,15 +155,20 @@ const Payments = () => {
 
     try {
       const result = await flutterwaveApi.initiateTransfer({
+      const reference = `DXW-SCH-${payment.id}-${Date.now()}`;
+      const result = await flutterwaveApi.processTransfer({
         account_bank: bankObj?.code || payment.bank_name,
         account_number: payment.account_number,
         amount: payment.amount,
+        currency: 'NGN',
+        narration: `Scheduled salary payment to ${payment.recipient_name}`,
+        reference,
         recipient_name: payment.recipient_name,
         payment_id: payment.id,
       });
 
       if (result.success) {
-        toast.success('Payment processed successfully!');
+        toast.success('Payment submitted successfully. Status will update automatically.');
         loadPayments();
       } else {
         toast.error(result.message || 'Transfer failed');
