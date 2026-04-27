@@ -33,6 +33,23 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
+    if ((payload.event === "transfer.completed" || payload.event === "transfer.failed") && payload.data?.reference) {
+      const reference = payload.data.reference;
+      const status = payload.data.status === "SUCCESSFUL" || payload.data.status === "successful" ? "completed" : "failed";
+      await adminClient.from("scheduled_payments").update({
+        status,
+        failure_reason: status === "failed" ? (payload.data.complete_message || payload.data.status || "Transfer failed") : null,
+        flutterwave_ref: payload.data.id?.toString() || reference,
+        transfer_id: payload.data.id?.toString() || "",
+      }).eq("reference", reference);
+
+      await adminClient.from("transactions").update({ status }).eq("reference", reference);
+
+      return new Response(JSON.stringify({ status: "transfer updated" }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     if (payload.event === "charge.completed" && payload.data?.status === "successful") {
       const { tx_ref, amount, id: txId } = payload.data;
 
@@ -131,6 +148,11 @@ serve(async (req) => {
         description: `Deposit via ${payload.data?.payment_type || 'bank transfer'}`,
         reference: `FLW-${txId}`,
         balance_after: newBalance,
+        sender_name: payload.data?.customer?.name || payload.data?.customer?.email || "External payer",
+        receiver_name: profile.business_name || `${profile.first_name || ""} ${profile.last_name || ""}`.trim(),
+        receiver_account: profile.virtual_account_number || "",
+        receiver_bank: profile.virtual_account_bank || "",
+        status: "completed",
       });
 
       console.log(`Credited ${verifiedAmount} to user ${profile.user_id}. New balance: ${newBalance}`);
