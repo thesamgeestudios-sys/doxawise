@@ -6,6 +6,7 @@ import { flutterwaveApi } from '@/lib/flutterwave';
 import { Users, Plus, Upload, Search, Trash2, Loader2, CheckCircle, UserCheck } from 'lucide-react';
 import { toast } from 'sonner';
 import { formatNaira } from '@/lib/constants';
+import { usePlatformAccess } from '@/hooks/usePlatformAccess';
 
 interface StaffMember {
   id: string;
@@ -24,6 +25,7 @@ interface Bank {
 
 const Staff = () => {
   const { user } = useAuth();
+  const { organizationId, mode, access } = usePlatformAccess();
   const [staff, setStaff] = useState<StaffMember[]>([]);
   const [banks, setBanks] = useState<Bank[]>([]);
   const [showAddModal, setShowAddModal] = useState(false);
@@ -34,7 +36,7 @@ const Staff = () => {
   const [saving, setSaving] = useState(false);
   const [resolvingAccount, setResolvingAccount] = useState(false);
   const [resolvedName, setResolvedName] = useState('');
-  const [newStaff, setNewStaff] = useState({ full_name: '', bank_code: '', bank_name: '', account_number: '', salary: '', pay_day: '25' });
+  const [newStaff, setNewStaff] = useState({ full_name: '', bank_code: '', bank_name: '', account_number: '', salary: '', pay_day: '25', department: '', job_title: '', staff_role: 'staff', email: '', phone: '' });
 
   useEffect(() => {
     if (user) {
@@ -45,7 +47,7 @@ const Staff = () => {
 
   const loadStaff = async () => {
     setLoading(true);
-    const { data } = await supabase.from('staff').select('*').eq('user_id', user!.id).order('created_at', { ascending: false });
+    const { data } = await supabase.from('staff').select('*').eq('user_id', organizationId || user!.id).order('created_at', { ascending: false });
     if (data) setStaff(data as StaffMember[]);
     setLoading(false);
   };
@@ -98,12 +100,17 @@ const Staff = () => {
     setSaving(true);
 
     const { error } = await supabase.from('staff').insert({
-      user_id: user!.id,
+      user_id: organizationId || user!.id,
       full_name: newStaff.full_name,
       bank_name: newStaff.bank_name || newStaff.bank_code,
       account_number: newStaff.account_number,
       salary: parseFloat(newStaff.salary) || 0,
       pay_day: parseInt(newStaff.pay_day) || 25,
+      department: newStaff.department,
+      job_title: newStaff.job_title,
+      staff_role: newStaff.staff_role,
+      email: newStaff.email,
+      phone: newStaff.phone,
     });
 
     setSaving(false);
@@ -111,7 +118,7 @@ const Staff = () => {
       toast.error(error.message);
     } else {
       toast.success(`${newStaff.full_name} added successfully`);
-      setNewStaff({ full_name: '', bank_code: '', bank_name: '', account_number: '', salary: '', pay_day: '25' });
+      setNewStaff({ full_name: '', bank_code: '', bank_name: '', account_number: '', salary: '', pay_day: '25', department: '', job_title: '', staff_role: 'staff', email: '', phone: '' });
       setBankSearch('');
       setResolvedName('');
       setShowAddModal(false);
@@ -179,8 +186,8 @@ const Staff = () => {
       <div className="space-y-6">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 section-reveal">
           <div>
-            <h1 className="text-2xl font-bold">Staff Management</h1>
-            <p className="text-muted-foreground">Manage your employees and their payment details</p>
+            <h1 className="text-2xl font-bold">{mode === 'school' ? 'School Staff & HR' : 'Staff & HR Management'}</h1>
+            <p className="text-muted-foreground">Manage profiles, roles, departments, onboarding, queries, and announcements</p>
           </div>
           <div className="flex gap-3">
             <label className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium cursor-pointer bg-secondary text-secondary-foreground hover:bg-secondary/80 transition-colors">
@@ -296,6 +303,21 @@ const Staff = () => {
                 <div>
                   <label className="block text-sm font-medium mb-1.5">Full Name</label>
                   <input value={newStaff.full_name} onChange={e => setNewStaff(p => ({ ...p, full_name: e.target.value }))} required className="input-field w-full" placeholder="Auto-filled from account" />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium mb-1.5">Department</label>
+                    <input value={newStaff.department} onChange={e => setNewStaff(p => ({ ...p, department: e.target.value }))} className="input-field w-full" placeholder="Operations" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1.5">Role</label>
+                    <select value={newStaff.staff_role} onChange={e => setNewStaff(p => ({ ...p, staff_role: e.target.value }))} className="input-field w-full">
+                      <option value="staff">Staff</option>
+                      <option value="teacher">Teacher</option>
+                      <option value="hr_manager">HR Manager</option>
+                      <option value="secretary_bursar">Secretary / Bursar</option>
+                    </select>
+                  </div>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
