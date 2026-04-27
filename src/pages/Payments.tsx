@@ -153,9 +153,8 @@ const Payments = () => {
     setProcessing(payment.id);
     const bankObj = banks.find(b => b.name === payment.bank_name);
 
-    try {
-      const result = await flutterwaveApi.initiateTransfer({
       const reference = `DXW-SCH-${payment.id}-${Date.now()}`;
+    try {
       const result = await flutterwaveApi.processTransfer({
         account_bank: bankObj?.code || payment.bank_name,
         account_number: payment.account_number,
