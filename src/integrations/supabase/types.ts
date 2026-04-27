@@ -734,9 +734,18 @@ export type Database = {
         Row: {
           amount: number
           balance_after: number | null
+          business_address: string | null
+          business_name: string | null
+          contact_info: string | null
           created_at: string
           description: string | null
           id: string
+          payment_method: string | null
+          receipt_generated_at: string | null
+          receipt_id: string | null
+          receipt_image_url: string | null
+          receipt_pdf_url: string | null
+          receipt_status: string
           receiver_account: string | null
           receiver_bank: string | null
           receiver_name: string | null
@@ -751,9 +760,18 @@ export type Database = {
         Insert: {
           amount: number
           balance_after?: number | null
+          business_address?: string | null
+          business_name?: string | null
+          contact_info?: string | null
           created_at?: string
           description?: string | null
           id?: string
+          payment_method?: string | null
+          receipt_generated_at?: string | null
+          receipt_id?: string | null
+          receipt_image_url?: string | null
+          receipt_pdf_url?: string | null
+          receipt_status?: string
           receiver_account?: string | null
           receiver_bank?: string | null
           receiver_name?: string | null
@@ -768,9 +786,18 @@ export type Database = {
         Update: {
           amount?: number
           balance_after?: number | null
+          business_address?: string | null
+          business_name?: string | null
+          contact_info?: string | null
           created_at?: string
           description?: string | null
           id?: string
+          payment_method?: string | null
+          receipt_generated_at?: string | null
+          receipt_id?: string | null
+          receipt_image_url?: string | null
+          receipt_pdf_url?: string | null
+          receipt_status?: string
           receiver_account?: string | null
           receiver_bank?: string | null
           receiver_name?: string | null
