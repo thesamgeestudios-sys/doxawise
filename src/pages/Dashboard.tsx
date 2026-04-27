@@ -234,29 +234,29 @@ const Dashboard = () => {
           </div>
           <div className="stat-card section-reveal stagger-3 border-l-4 border-l-[hsl(var(--warning))]">
             <CreditCard className="w-5 h-5 text-[hsl(var(--warning))] mb-3" />
-            <p className="text-2xl font-bold">{pendingPayments}</p>
-            <p className="text-sm text-muted-foreground mt-1">{mode === 'school' ? 'Students' : 'Pending Payments'}</p>
+            <p className="text-2xl font-bold">{mode === 'school' ? schoolStats.students : pendingPayments}</p>
+            <p className="text-sm text-muted-foreground mt-1">{mode === 'school' ? 'Total Students' : 'Pending Payments'}</p>
           </div>
           <div className="stat-card section-reveal stagger-4 border-l-4 border-l-[hsl(var(--success))]">
             <TrendingUp className="w-5 h-5 text-[hsl(var(--success))] mb-3" />
-            <p className="text-2xl font-bold">{formatNaira(totalDisbursed)}</p>
+            <p className="text-2xl font-bold">{formatNaira(mode === 'school' ? schoolStats.feesCollected : totalDisbursed)}</p>
             <p className="text-sm text-muted-foreground mt-1">{mode === 'school' ? 'Fees Collected' : 'Total Salary Paid'}</p>
           </div>
         </div>
 
         {/* Quick Actions */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 section-reveal stagger-2">
-          <button onClick={() => navigate('/dashboard/payments')} className="card-elevated p-4 text-center hover:border-primary/40 transition-colors group">
+          {access.isFinance && <button onClick={() => navigate('/dashboard/payments')} className="card-elevated p-4 text-center hover:border-primary/40 transition-colors group">
             <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center mx-auto mb-2 group-hover:bg-primary/20 transition-colors">
               <Banknote className="w-5 h-5 text-primary" />
             </div>
-            <p className="text-sm font-medium">Send Money</p>
-          </button>
+            <p className="text-sm font-medium">{mode === 'school' ? 'Salary Payroll' : 'Payroll'}</p>
+          </button>}
           <button onClick={() => navigate('/dashboard/staff')} className="card-elevated p-4 text-center hover:border-[hsl(var(--info))]/40 transition-colors group">
             <div className="w-10 h-10 rounded-xl bg-[hsl(var(--info))]/10 flex items-center justify-center mx-auto mb-2 group-hover:bg-[hsl(var(--info))]/20 transition-colors">
               <Users className="w-5 h-5 text-[hsl(var(--info))]" />
             </div>
-            <p className="text-sm font-medium">Manage Staff</p>
+            <p className="text-sm font-medium">{mode === 'school' ? 'Manage Staff' : 'Manage Staff'}</p>
           </button>
           <button onClick={() => navigate('/dashboard/cards')} className="card-elevated p-4 text-center hover:border-[hsl(var(--purple))]/40 transition-colors group">
             <div className="w-10 h-10 rounded-xl bg-[hsl(var(--purple))]/10 flex items-center justify-center mx-auto mb-2 group-hover:bg-[hsl(var(--purple))]/20 transition-colors">
