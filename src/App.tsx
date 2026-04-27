@@ -18,6 +18,8 @@ import UserSettings from "./pages/UserSettings";
 import Admin from "./pages/Admin";
 import Terms from "./pages/Terms";
 import EmailConfirmed from "./pages/EmailConfirmed";
+import RegistrationSuccess from "./pages/RegistrationSuccess";
+import SchoolManagement from "./pages/SchoolManagement";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -34,8 +36,10 @@ const App = () => (
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
             <Route path="/email-confirmed" element={<EmailConfirmed />} />
+            <Route path="/registration-success" element={<RegistrationSuccess />} />
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/dashboard/staff" element={<Staff />} />
+            <Route path="/dashboard/students" element={<SchoolManagement />} />
             <Route path="/dashboard/payments" element={<Payments />} />
             <Route path="/dashboard/send" element={<SendMoney />} />
             <Route path="/dashboard/international" element={<InternationalPayments />} />
