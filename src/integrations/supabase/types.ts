@@ -362,14 +362,18 @@ export type Database = {
           amount: number
           bank_name: string
           created_at: string
+          currency: string
           failure_reason: string | null
           fee: number
           flutterwave_ref: string | null
           id: string
+          processed_at: string | null
           recipient_name: string
+          reference: string | null
           scheduled_date: string
           staff_id: string | null
           status: string
+          transfer_id: string | null
           updated_at: string
           user_id: string
         }
@@ -378,14 +382,18 @@ export type Database = {
           amount: number
           bank_name: string
           created_at?: string
+          currency?: string
           failure_reason?: string | null
           fee?: number
           flutterwave_ref?: string | null
           id?: string
+          processed_at?: string | null
           recipient_name: string
+          reference?: string | null
           scheduled_date: string
           staff_id?: string | null
           status?: string
+          transfer_id?: string | null
           updated_at?: string
           user_id: string
         }
@@ -394,14 +402,18 @@ export type Database = {
           amount?: number
           bank_name?: string
           created_at?: string
+          currency?: string
           failure_reason?: string | null
           fee?: number
           flutterwave_ref?: string | null
           id?: string
+          processed_at?: string | null
           recipient_name?: string
+          reference?: string | null
           scheduled_date?: string
           staff_id?: string | null
           status?: string
+          transfer_id?: string | null
           updated_at?: string
           user_id?: string
         }
@@ -725,7 +737,14 @@ export type Database = {
           created_at: string
           description: string | null
           id: string
+          receiver_account: string | null
+          receiver_bank: string | null
+          receiver_name: string | null
           reference: string | null
+          sender_account: string | null
+          sender_bank: string | null
+          sender_name: string | null
+          status: string
           type: string
           user_id: string
         }
@@ -735,7 +754,14 @@ export type Database = {
           created_at?: string
           description?: string | null
           id?: string
+          receiver_account?: string | null
+          receiver_bank?: string | null
+          receiver_name?: string | null
           reference?: string | null
+          sender_account?: string | null
+          sender_bank?: string | null
+          sender_name?: string | null
+          status?: string
           type: string
           user_id: string
         }
@@ -745,7 +771,14 @@ export type Database = {
           created_at?: string
           description?: string | null
           id?: string
+          receiver_account?: string | null
+          receiver_bank?: string | null
+          receiver_name?: string | null
           reference?: string | null
+          sender_account?: string | null
+          sender_bank?: string | null
+          sender_name?: string | null
+          status?: string
           type?: string
           user_id?: string
         }
