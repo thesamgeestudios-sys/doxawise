@@ -71,8 +71,11 @@ const AdminPanel = () => {
 
   const checkAdmin = async () => {
     if (!user) { navigate('/login'); return; }
-    const { data } = await supabase.from('user_roles').select('role').eq('user_id', user.id).eq('role', 'admin');
-    if (data && data.length > 0) { setIsAdmin(true); loadAdminData(); }
+    const [{ data }, creatorRes] = await Promise.all([
+      supabase.from('user_roles').select('role').eq('user_id', user.id).eq('role', 'admin'),
+      supabase.rpc('is_platform_creator' as any, { _user_id: user.id } as any),
+    ]);
+    if ((data && data.length > 0) || creatorRes.data) { setIsAdmin(true); loadAdminData(); }
     else { setIsAdmin(false); setLoading(false); }
   };
 
@@ -315,7 +318,7 @@ const AdminPanel = () => {
         <div className="page-container flex items-center justify-between h-16">
           <div className="flex items-center gap-3">
             <span className="text-xl font-bold text-primary">{APP_NAME}</span>
-            <span className="bg-destructive text-destructive-foreground text-xs font-bold px-2 py-0.5 rounded">ADMIN</span>
+            <span className="bg-destructive text-destructive-foreground text-xs font-bold px-2 py-0.5 rounded">CREATOR CONSOLE</span>
           </div>
           <div className="flex items-center gap-3">
             <button onClick={() => navigate('/dashboard')} className="text-sm text-muted-foreground hover:text-foreground flex items-center gap-1"><Eye className="w-4 h-4" /> User View</button>
