@@ -35,7 +35,7 @@ serve(async (req) => {
       .from("profiles")
       .select("*")
       .eq("user_id", user.id)
-      .single();
+      .maybeSingle();
 
     if (profile?.virtual_account_number) {
       return new Response(
@@ -54,10 +54,21 @@ serve(async (req) => {
     const txRef = `DXW-${user.id.slice(0, 8)}-${Date.now()}`;
     
     // Use user's actual first and last name for the static VA
-    const firstName = profile?.first_name || user.user_metadata?.first_name || "";
-    const lastName = profile?.last_name || user.user_metadata?.last_name || "";
-    const narration = profile?.business_name || "Doxawise Account";
-    const bvn = profile?.bvn || "";
+    const firstName = profile?.first_name || user.user_metadata?.first_name || "Doxawise";
+    const lastName = profile?.last_name || user.user_metadata?.last_name || "User";
+    const narration = profile?.business_name || user.user_metadata?.business_name || "Doxawise Account";
+    const bvn = (profile?.bvn || user.user_metadata?.bvn || "").trim();
+    const nin = (profile?.nin || user.user_metadata?.nin || "").trim();
+
+    if (!bvn && !nin) {
+      return new Response(
+        JSON.stringify({
+          success: false,
+          message: "Please add your BVN or NIN in account settings before generating a virtual account.",
+        }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
 
     // Create static virtual account with user's own name
     const flwRes = await fetch("https://api.flutterwave.com/v3/virtual-account-numbers", {
@@ -69,9 +80,9 @@ serve(async (req) => {
       body: JSON.stringify({
         email: user.email,
         is_permanent: true,
-        bvn: bvn,
+        ...(bvn ? { bvn } : { nin }),
         tx_ref: txRef,
-        phonenumber: profile?.phone || "",
+        phonenumber: profile?.phone || user.user_metadata?.phone || "",
         firstname: firstName,
         lastname: lastName,
         narration: narration,
