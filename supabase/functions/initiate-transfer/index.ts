@@ -89,7 +89,7 @@ serve(async (req) => {
         .update({ wallet_balance: newBalance })
         .eq("user_id", user.id);
 
-      await adminClient.from("transactions").insert({
+      const { data: transaction } = await adminClient.from("transactions").insert({
         user_id: user.id,
         type: "debit",
         amount: totalDebit,
@@ -108,7 +108,7 @@ serve(async (req) => {
         payment_method: "Bank Transfer",
         business_name: profile.business_name || `${profile.first_name || ""} ${profile.last_name || ""}`.trim(),
         contact_info: profile.phone || user.email || "",
-      });
+      }).select("*").single();
 
       if (payment_id) {
         await adminClient
@@ -118,7 +118,7 @@ serve(async (req) => {
       }
 
       return new Response(
-        JSON.stringify({ success: true, message: "Transfer initiated", data: flwData.data, new_balance: newBalance }),
+        JSON.stringify({ success: true, message: "Transfer initiated", data: flwData.data, new_balance: newBalance, transaction }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     } else {
