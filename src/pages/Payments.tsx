@@ -48,6 +48,7 @@ const Payments = () => {
   const [showBankDropdown, setShowBankDropdown] = useState(false);
   const [resolvingAccount, setResolvingAccount] = useState(false);
   const [resolvedName, setResolvedName] = useState('');
+  const [resolveError, setResolveError] = useState('');
   const [selectedStaff, setSelectedStaff] = useState<Set<string>>(new Set());
   const [form, setForm] = useState({ recipientName: '', bankCode: '', bankName: '', accountNumber: '', amount: '', scheduledDate: '', scheduledTime: '09:00' });
 
@@ -92,14 +93,16 @@ const Payments = () => {
     if (accountNumber.length !== 10 || !bankCode) return;
     setResolvingAccount(true);
     setResolvedName('');
+    setResolveError('');
     try {
       const result = await flutterwaveApi.resolveAccount(accountNumber, bankCode);
       if (result.success && result.data?.account_name) {
         setResolvedName(result.data.account_name);
         setForm(p => ({ ...p, recipientName: result.data.account_name }));
-      }
+      } else setResolveError(result.message || 'Could not resolve account');
     } catch (err) {
       console.error('Account resolve failed:', err);
+      setResolveError(err instanceof Error ? err.message : 'Could not resolve account');
     }
     setResolvingAccount(false);
   }, []);
@@ -109,6 +112,7 @@ const Payments = () => {
       resolveAccount(form.accountNumber, form.bankCode);
     } else {
       setResolvedName('');
+      setResolveError('');
     }
   }, [form.accountNumber, form.bankCode, resolveAccount]);
 
@@ -172,8 +176,8 @@ const Payments = () => {
       } else {
         toast.error(result.message || 'Transfer failed');
       }
-    } catch (err: any) {
-      toast.error(err.message);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Transfer failed');
     }
     setProcessing(null);
   };
@@ -216,8 +220,8 @@ const Payments = () => {
     try {
       const result = await flutterwaveApi.batchTransfer(transfers);
       if (result.success) {
-        const successCount = result.results?.filter((r: any) => r.status === 'success').length || 0;
-        const failCount = result.results?.filter((r: any) => r.status === 'failed').length || 0;
+        const successCount = result.results?.filter((r: { status: string }) => r.status === 'success').length || 0;
+        const failCount = result.results?.filter((r: { status: string }) => r.status === 'failed').length || 0;
         toast.success(`Batch payment complete: ${successCount} succeeded, ${failCount} failed`);
         setSelectedStaff(new Set());
         setShowBatchModal(false);
@@ -225,8 +229,8 @@ const Payments = () => {
       } else {
         toast.error(result.error || 'Batch payment failed');
       }
-    } catch (err: any) {
-      toast.error(err.message);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Batch payment failed');
     }
     setBatchProcessing(false);
   };
@@ -384,6 +388,11 @@ const Payments = () => {
                   {resolvedName && (
                     <p className="text-xs text-[hsl(var(--success))] mt-1 flex items-center gap-1 font-medium">
                       <UserCheck className="w-3 h-3" /> {resolvedName}
+                    </p>
+                  )}
+                  {resolveError && (
+                    <p className="text-xs text-destructive mt-1 flex items-center gap-1">
+                      <AlertCircle className="w-3 h-3" /> {resolveError}
                     </p>
                   )}
                 </div>

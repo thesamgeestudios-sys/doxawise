@@ -98,7 +98,7 @@ serve(async (req) => {
           runningBalance -= (t.amount + fee);
 
           await adminClient.from("profiles").update({ wallet_balance: runningBalance }).eq("user_id", user.id);
-          await adminClient.from("transactions").insert({
+          const { data: transaction } = await adminClient.from("transactions").insert({
             user_id: user.id,
             type: "debit",
             amount: t.amount + fee,
@@ -117,7 +117,7 @@ serve(async (req) => {
             payment_method: "Bank Transfer",
             business_name: profile.business_name || `${profile.first_name || ""} ${profile.last_name || ""}`.trim(),
             contact_info: profile.phone || user.email || "",
-          });
+          }).select("*").single();
 
           // Update scheduled_payment if staff_id provided
           if (t.payment_id) {
@@ -126,7 +126,7 @@ serve(async (req) => {
               .eq("id", t.payment_id);
           }
 
-          results.push({ recipient: t.recipient_name, status: "success", amount: t.amount });
+          results.push({ recipient: t.recipient_name, status: "success", amount: t.amount, transaction });
         } else {
           if (t.payment_id) {
             await adminClient.from("scheduled_payments")

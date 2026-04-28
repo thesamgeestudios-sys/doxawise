@@ -137,4 +137,10 @@ export const flutterwaveApi = {
     beneficiary_name?: string;
     narration?: string;
   }) => callEdgeFunction("international-transfer", { action: "transfer", ...params }),
+
+  storeReceipt: (params: {
+    transaction_id: string;
+    receipt_pdf_url: string;
+    receipt_image_url: string;
+  }) => callEdgeFunction("store-receipt", params),
 };

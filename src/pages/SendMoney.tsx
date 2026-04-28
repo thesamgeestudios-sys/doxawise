@@ -6,6 +6,7 @@ import { flutterwaveApi } from '@/lib/flutterwave';
 import { formatNaira, calculateFee } from '@/lib/constants';
 import { Send, Search, Loader2, CheckCircle, UserCheck, AlertCircle, Banknote, WifiOff } from 'lucide-react';
 import { toast } from 'sonner';
+import { generateReceiptFiles } from '@/lib/receiptGenerator';
 
 interface Bank { code: string; name: string; }
 
@@ -16,6 +17,7 @@ const SendMoney = () => {
   const [showBankDropdown, setShowBankDropdown] = useState(false);
   const [resolvingAccount, setResolvingAccount] = useState(false);
   const [resolvedName, setResolvedName] = useState('');
+  const [resolveError, setResolveError] = useState('');
   const [sending, setSending] = useState(false);
   const [banksError, setBanksError] = useState(false);
   const [form, setForm] = useState({ recipientName: '', bankCode: '', bankName: '', accountNumber: '', amount: '', narration: '' });
@@ -37,19 +39,20 @@ const SendMoney = () => {
     if (accountNumber.length !== 10 || !bankCode) return;
     setResolvingAccount(true);
     setResolvedName('');
+    setResolveError('');
     try {
       const result = await flutterwaveApi.resolveAccount(accountNumber, bankCode);
       if (result.success && result.data?.account_name) {
         setResolvedName(result.data.account_name);
         setForm(p => ({ ...p, recipientName: result.data.account_name }));
-      }
-    } catch { /* ignore */ }
+      } else setResolveError(result.message || 'Could not resolve account');
+    } catch (err) { setResolveError(err instanceof Error ? err.message : 'Could not resolve account'); }
     setResolvingAccount(false);
   }, []);
 
   useEffect(() => {
     if (form.accountNumber.length === 10 && form.bankCode) resolveAccount(form.accountNumber, form.bankCode);
-    else setResolvedName('');
+    else { setResolvedName(''); setResolveError(''); }
   }, [form.accountNumber, form.bankCode, resolveAccount]);
 
   const selectBank = (bank: Bank) => {
@@ -75,6 +78,11 @@ const SendMoney = () => {
         narration: form.narration || `Transfer to ${form.recipientName}`,
       });
       if (result.success) {
+        if (result.transaction) {
+          generateReceiptFiles(result.transaction).then(files => {
+            flutterwaveApi.storeReceipt({ transaction_id: result.transaction.id, receipt_pdf_url: files.receipt_pdf_url, receipt_image_url: files.receipt_image_url });
+          }).catch(() => undefined);
+        }
         toast.success(`${formatNaira(amount)} sent to ${form.recipientName} successfully!`);
         setForm({ recipientName: '', bankCode: '', bankName: '', accountNumber: '', amount: '', narration: '' });
         setBankSearch('');
@@ -82,8 +90,8 @@ const SendMoney = () => {
       } else {
         toast.error(result.message || 'Transfer failed');
       }
-    } catch (err: any) {
-      toast.error(err.message);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Transfer failed');
     }
     setSending(false);
   };
@@ -142,6 +150,7 @@ const SendMoney = () => {
               <input value={form.accountNumber} onChange={e => setForm(p => ({ ...p, accountNumber: e.target.value.replace(/\D/g, '') }))} required maxLength={10} className="input-field w-full" placeholder="0123456789" />
               {resolvingAccount && <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1"><Loader2 className="w-3 h-3 animate-spin" /> Resolving account...</p>}
               {resolvedName && <p className="text-xs text-[hsl(var(--success))] mt-1 flex items-center gap-1 font-medium"><UserCheck className="w-3 h-3" /> {resolvedName}</p>}
+              {resolveError && <p className="text-xs text-destructive mt-1 flex items-center gap-1"><AlertCircle className="w-3 h-3" /> {resolveError}</p>}
             </div>
 
             <div>

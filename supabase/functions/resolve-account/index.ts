@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { fetch as undiciFetch, ProxyAgent } from "npm:undici@6.19.8";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -12,7 +13,9 @@ serve(async (req) => {
 
   try {
     const FLW_SECRET_KEY = Deno.env.get("FLW_SECRET_KEY");
+    const FIXIE_URL = Deno.env.get("FIXIE_URL");
     if (!FLW_SECRET_KEY) throw new Error("FLW_SECRET_KEY not configured");
+    if (!FIXIE_URL) throw new Error("FIXIE_URL not configured");
 
     const authHeader = req.headers.get("authorization");
     if (!authHeader) throw new Error("Missing authorization header");
@@ -29,16 +32,18 @@ serve(async (req) => {
     const { account_number, account_bank } = await req.json();
     if (!account_number || !account_bank) throw new Error("Account number and bank code are required");
 
-    const res = await fetch(
+    const proxyAgent = new ProxyAgent(FIXIE_URL);
+    const res = await undiciFetch(
       `https://api.flutterwave.com/v3/accounts/resolve`,
       {
         method: "POST",
+        dispatcher: proxyAgent,
         headers: {
           Authorization: `Bearer ${FLW_SECRET_KEY}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({ account_number, account_bank }),
-      }
+      } as any
     );
 
     const data = await res.json();
