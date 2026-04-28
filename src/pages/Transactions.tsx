@@ -5,6 +5,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { FileText, Download, ArrowUpRight, ArrowDownRight, Loader2 } from 'lucide-react';
 import { formatNaira } from '@/lib/constants';
 import TransactionReceipt from '@/components/TransactionReceipt';
+import { downloadDataUrl, generateReceiptFiles } from '@/lib/receiptGenerator';
+import { flutterwaveApi } from '@/lib/flutterwave';
 
 interface Transaction {
   id: string;
@@ -40,6 +42,7 @@ const Transactions = () => {
   const [selectedTx, setSelectedTx] = useState<Transaction | null>(null);
   const [autoDownload, setAutoDownload] = useState<'pdf' | 'jpg' | null>(null);
   const [profile, setProfile] = useState<any>(null);
+  const [generatingReceipt, setGeneratingReceipt] = useState<string | null>(null);
 
   useEffect(() => {
     if (user) {
@@ -65,6 +68,33 @@ const Transactions = () => {
   };
 
   const filtered = filter === 'all' ? transactions : transactions.filter(t => t.type === filter);
+
+  const ensureReceipt = async (tx: Transaction) => {
+    if (tx.receipt_pdf_url && tx.receipt_image_url) return tx;
+    setGeneratingReceipt(tx.id);
+    try {
+      const files = await generateReceiptFiles(tx, profile);
+      await flutterwaveApi.storeReceipt({ transaction_id: tx.id, receipt_pdf_url: files.receipt_pdf_url, receipt_image_url: files.receipt_image_url });
+      const updated = { ...tx, ...files, receipt_status: 'generated', receipt_generated_at: new Date().toISOString() };
+      setTransactions(prev => prev.map(item => item.id === tx.id ? updated : item));
+      return updated;
+    } finally {
+      setGeneratingReceipt(null);
+    }
+  };
+
+  const downloadReceipt = async (tx: Transaction, format: 'pdf' | 'jpg') => {
+    try {
+      const readyTx = await ensureReceipt(tx);
+      const receiptId = readyTx.receipt_id || `DXW-RCPT-${readyTx.id.replace(/-/g, '').toUpperCase()}`;
+      const stem = `doxawise-receipt-${receiptId.slice(-12).toLowerCase()}`;
+      if (format === 'pdf' && readyTx.receipt_pdf_url) downloadDataUrl(readyTx.receipt_pdf_url, `${stem}.pdf`);
+      if (format === 'jpg' && readyTx.receipt_image_url) downloadDataUrl(readyTx.receipt_image_url, `${stem}.jpg`);
+    } catch {
+      setSelectedTx(tx);
+      setAutoDownload(format);
+    }
+  };
 
   const exportCSV = () => {
     const rows = [
@@ -141,14 +171,16 @@ const Transactions = () => {
                   <div className="flex shrink-0 items-center gap-3 ml-4">
                     <div className="hidden sm:flex items-center gap-2">
                       <button
-                        onClick={(e) => { e.stopPropagation(); setSelectedTx(tx); setAutoDownload('pdf'); }}
-                        className="inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-xs font-medium hover:bg-muted transition-colors"
+                        onClick={(e) => { e.stopPropagation(); downloadReceipt(tx, 'pdf'); }}
+                        disabled={generatingReceipt === tx.id}
+                        className="inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-xs font-medium hover:bg-muted transition-colors disabled:opacity-60"
                       >
-                        <Download className="w-3.5 h-3.5" /> PDF
+                        {generatingReceipt === tx.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />} PDF
                       </button>
                       <button
-                        onClick={(e) => { e.stopPropagation(); setSelectedTx(tx); setAutoDownload('jpg'); }}
-                        className="inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-xs font-medium hover:bg-muted transition-colors"
+                        onClick={(e) => { e.stopPropagation(); downloadReceipt(tx, 'jpg'); }}
+                        disabled={generatingReceipt === tx.id}
+                        className="inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-xs font-medium hover:bg-muted transition-colors disabled:opacity-60"
                       >
                         JPG
                       </button>
