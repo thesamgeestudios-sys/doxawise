@@ -46,7 +46,7 @@ const SendMoney = () => {
         setResolvedName(result.data.account_name);
         setForm(p => ({ ...p, recipientName: result.data.account_name }));
       } else setResolveError(result.message || 'Could not resolve account');
-    } catch (err: any) { setResolveError(err.message || 'Could not resolve account'); }
+    } catch (err) { setResolveError(err instanceof Error ? err.message : 'Could not resolve account'); }
     setResolvingAccount(false);
   }, []);
 
@@ -90,8 +90,8 @@ const SendMoney = () => {
       } else {
         toast.error(result.message || 'Transfer failed');
       }
-    } catch (err: any) {
-      toast.error(err.message);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Transfer failed');
     }
     setSending(false);
   };

@@ -34,6 +34,15 @@ interface Transaction {
   receiver_bank?: string | null;
 }
 
+interface Profile {
+  business_name?: string | null;
+  first_name?: string | null;
+  last_name?: string | null;
+  phone?: string | null;
+  virtual_account_number?: string | null;
+  virtual_account_bank?: string | null;
+}
+
 const Transactions = () => {
   const { user } = useAuth();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -41,7 +50,7 @@ const Transactions = () => {
   const [filter, setFilter] = useState<'all' | 'credit' | 'debit'>('all');
   const [selectedTx, setSelectedTx] = useState<Transaction | null>(null);
   const [autoDownload, setAutoDownload] = useState<'pdf' | 'jpg' | null>(null);
-  const [profile, setProfile] = useState<any>(null);
+  const [profile, setProfile] = useState<Profile | null>(null);
   const [generatingReceipt, setGeneratingReceipt] = useState<string | null>(null);
 
   useEffect(() => {

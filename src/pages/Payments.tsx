@@ -176,8 +176,8 @@ const Payments = () => {
       } else {
         toast.error(result.message || 'Transfer failed');
       }
-    } catch (err: any) {
-      toast.error(err.message);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Transfer failed');
     }
     setProcessing(null);
   };
@@ -220,8 +220,8 @@ const Payments = () => {
     try {
       const result = await flutterwaveApi.batchTransfer(transfers);
       if (result.success) {
-        const successCount = result.results?.filter((r: any) => r.status === 'success').length || 0;
-        const failCount = result.results?.filter((r: any) => r.status === 'failed').length || 0;
+        const successCount = result.results?.filter((r: { status: string }) => r.status === 'success').length || 0;
+        const failCount = result.results?.filter((r: { status: string }) => r.status === 'failed').length || 0;
         toast.success(`Batch payment complete: ${successCount} succeeded, ${failCount} failed`);
         setSelectedStaff(new Set());
         setShowBatchModal(false);
@@ -229,8 +229,8 @@ const Payments = () => {
       } else {
         toast.error(result.error || 'Batch payment failed');
       }
-    } catch (err: any) {
-      toast.error(err.message);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Batch payment failed');
     }
     setBatchProcessing(false);
   };
