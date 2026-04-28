@@ -90,7 +90,7 @@ serve(async (req) => {
       const newBalance = (Number(profile.wallet_balance) || 0) - totalDebit;
       const transferId = flwData.data?.id?.toString() || "";
       await adminClient.from("profiles").update({ wallet_balance: newBalance }).eq("user_id", user.id);
-      await adminClient.from("transactions").insert({
+      const { data: transaction } = await adminClient.from("transactions").insert({
         user_id: user.id,
         type: "debit",
         amount: totalDebit,
@@ -109,11 +109,11 @@ serve(async (req) => {
         payment_method: "Bank Transfer",
         business_name: profile.business_name || `${profile.first_name || ""} ${profile.last_name || ""}`.trim(),
         contact_info: profile.phone || user.email || "",
-      });
+      }).select("*").single();
       if (payment_id) {
         await adminClient.from("scheduled_payments").update({ status: "processing", reference, transfer_id: transferId, flutterwave_ref: transferId, processed_at: new Date().toISOString() }).eq("id", payment_id);
       }
-      return json({ success: true, data: flwData, reference, transfer_id: transferId, new_balance: newBalance });
+      return json({ success: true, data: flwData, reference, transfer_id: transferId, new_balance: newBalance, transaction });
     }
 
     if (payment_id) {
