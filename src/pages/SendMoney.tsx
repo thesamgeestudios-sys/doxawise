@@ -6,6 +6,7 @@ import { flutterwaveApi } from '@/lib/flutterwave';
 import { formatNaira, calculateFee } from '@/lib/constants';
 import { Send, Search, Loader2, CheckCircle, UserCheck, AlertCircle, Banknote, WifiOff } from 'lucide-react';
 import { toast } from 'sonner';
+import { generateReceiptFiles } from '@/lib/receiptGenerator';
 
 interface Bank { code: string; name: string; }
 
@@ -75,6 +76,11 @@ const SendMoney = () => {
         narration: form.narration || `Transfer to ${form.recipientName}`,
       });
       if (result.success) {
+        if (result.transaction) {
+          generateReceiptFiles(result.transaction).then(files => {
+            flutterwaveApi.storeReceipt({ transaction_id: result.transaction.id, receipt_pdf_url: files.receipt_pdf_url, receipt_image_url: files.receipt_image_url });
+          }).catch(() => undefined);
+        }
         toast.success(`${formatNaira(amount)} sent to ${form.recipientName} successfully!`);
         setForm({ recipientName: '', bankCode: '', bankName: '', accountNumber: '', amount: '', narration: '' });
         setBankSearch('');
