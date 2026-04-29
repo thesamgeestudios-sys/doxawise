@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { fetch as undiciFetch, ProxyAgent } from "npm:undici@6.19.8";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -12,6 +13,9 @@ serve(async (req) => {
   try {
     const FLW_SECRET_KEY = Deno.env.get("FLW_SECRET_KEY");
     if (!FLW_SECRET_KEY) throw new Error("FLW_SECRET_KEY not configured");
+    const FIXIE_URL = Deno.env.get("FIXIE_URL");
+    if (!FIXIE_URL) throw new Error("FIXIE_URL not configured");
+    const proxyAgent = new ProxyAgent(FIXIE_URL);
 
     // Verify webhook hash - use dedicated FLW_WEBHOOK_HASH or fallback to secret key
     const secretHash = req.headers.get("verif-hash");
@@ -54,9 +58,10 @@ serve(async (req) => {
       const { tx_ref, amount, id: txId } = payload.data;
 
       // Verify transaction with Flutterwave
-      const verifyRes = await fetch(`https://api.flutterwave.com/v3/transactions/${txId}/verify`, {
+      const verifyRes = await undiciFetch(`https://api.flutterwave.com/v3/transactions/${txId}/verify`, {
         headers: { Authorization: `Bearer ${FLW_SECRET_KEY}` },
-      });
+        dispatcher: proxyAgent,
+      } as any);
       const verifyData = await verifyRes.json();
 
       if (verifyData.status !== "success" || verifyData.data?.status !== "successful") {
