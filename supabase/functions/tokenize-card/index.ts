@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { fetch as undiciFetch, ProxyAgent } from "npm:undici@6.19.8";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -15,6 +16,9 @@ serve(async (req) => {
     const FLW_ENCRYPTION_KEY = Deno.env.get("FLW_ENCRYPTION_KEY");
     if (!FLW_SECRET_KEY) throw new Error("FLW_SECRET_KEY not configured");
     if (!FLW_ENCRYPTION_KEY) throw new Error("FLW_ENCRYPTION_KEY not configured");
+    const FIXIE_URL = Deno.env.get("FIXIE_URL");
+    if (!FIXIE_URL) throw new Error("FIXIE_URL not configured");
+    const proxyAgent = new ProxyAgent(FIXIE_URL);
 
     const authHeader = req.headers.get("authorization");
     if (!authHeader) throw new Error("Missing authorization header");
@@ -47,14 +51,15 @@ serve(async (req) => {
         redirect_url: `${Deno.env.get("SUPABASE_URL")}/functions/v1/tokenize-card`,
       };
 
-      const chargeRes = await fetch("https://api.flutterwave.com/v3/charges?type=card", {
+      const chargeRes = await undiciFetch("https://api.flutterwave.com/v3/charges?type=card", {
         method: "POST",
         headers: {
           Authorization: `Bearer ${FLW_SECRET_KEY}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify(payload),
-      });
+        dispatcher: proxyAgent,
+      } as any);
 
       const chargeData = await chargeRes.json();
 
@@ -67,14 +72,15 @@ serve(async (req) => {
     if (action === "validate") {
       const { flw_ref, otp } = body;
 
-      const validateRes = await fetch("https://api.flutterwave.com/v3/validate-charge", {
+      const validateRes = await undiciFetch("https://api.flutterwave.com/v3/validate-charge", {
         method: "POST",
         headers: {
           Authorization: `Bearer ${FLW_SECRET_KEY}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({ otp, flw_ref, type: "card" }),
-      });
+        dispatcher: proxyAgent,
+      } as any);
 
       const validateData = await validateRes.json();
 
