@@ -131,8 +131,10 @@ serve(async (req) => {
     if (action === "fund") {
       const { card_id, amount } = body;
 
-      const flwRes = await fetch(`https://api.flutterwave.com/v3/virtual-cards/${card_id}/fund`, {
+      const proxyAgent = new ProxyAgent(FIXIE_URL);
+      const flwRes = await undiciFetch(`https://api.flutterwave.com/v3/virtual-cards/${card_id}/fund`, {
         method: "POST",
+        dispatcher: proxyAgent,
         headers: {
           Authorization: `Bearer ${FLW_SECRET_KEY}`,
           "Content-Type": "application/json",
@@ -141,7 +143,7 @@ serve(async (req) => {
           debit_currency: "NGN",
           amount,
         }),
-      });
+      } as any);
 
       const flwData = await flwRes.json();
 
@@ -178,13 +180,15 @@ serve(async (req) => {
       const { card_id } = body;
       const status = action === "block" ? "block" : "unblock";
 
-      const flwRes = await fetch(`https://api.flutterwave.com/v3/virtual-cards/${card_id}/status/${status}`, {
+      const proxyAgent = new ProxyAgent(FIXIE_URL);
+      const flwRes = await undiciFetch(`https://api.flutterwave.com/v3/virtual-cards/${card_id}/status/${status}`, {
         method: "PUT",
+        dispatcher: proxyAgent,
         headers: {
           Authorization: `Bearer ${FLW_SECRET_KEY}`,
           "Content-Type": "application/json",
         },
-      });
+      } as any);
 
       const flwData = await flwRes.json();
 
@@ -210,13 +214,15 @@ serve(async (req) => {
     if (action === "terminate") {
       const { card_id } = body;
 
-      const flwRes = await fetch(`https://api.flutterwave.com/v3/virtual-cards/${card_id}/terminate`, {
+      const proxyAgent = new ProxyAgent(FIXIE_URL);
+      const flwRes = await undiciFetch(`https://api.flutterwave.com/v3/virtual-cards/${card_id}/terminate`, {
         method: "PUT",
+        dispatcher: proxyAgent,
         headers: {
           Authorization: `Bearer ${FLW_SECRET_KEY}`,
           "Content-Type": "application/json",
         },
-      });
+      } as any);
 
       const flwData = await flwRes.json();
 
