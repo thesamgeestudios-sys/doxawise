@@ -24,12 +24,12 @@ const DashboardLayout = ({ children }: { children: ReactNode }) => {
     }
   }, [user]);
 
-  const businessName = user?.user_metadata?.business_name || 'My Business';
+  const businessName = user?.user_metadata?.business_name || (mode === 'school' ? 'My School' : 'My Business');
   const initials = (user?.user_metadata?.first_name?.[0] || '') + (user?.user_metadata?.last_name?.[0] || '');
 
   const navItems = [
     { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard', show: true },
-    { to: '/dashboard/staff', icon: Users, label: mode === 'school' ? 'Staff & HR' : 'Staff & HR', show: access.isHr || access.isDirector || access.isLimitedStaff },
+    { to: '/dashboard/staff', icon: Users, label: 'Staff & HR', show: access.isHr || access.isDirector || access.isLimitedStaff },
     { to: '/dashboard/students', icon: Users, label: 'Students & Fees', show: mode === 'school' && (access.isBursar || access.isDirector) },
     { to: '/dashboard/payments', icon: CreditCard, label: mode === 'school' ? 'Salary Payroll' : 'Payroll', show: access.isFinance },
     { to: '/dashboard/send', icon: Banknote, label: 'Send Money', show: access.isFinance },

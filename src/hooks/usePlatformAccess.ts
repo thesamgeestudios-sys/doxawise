@@ -43,8 +43,14 @@ export const usePlatformAccess = () => {
         supabase.rpc('is_platform_creator' as any, { _user_id: user.id } as any),
       ]);
 
+      let profileData = profileRes.data;
+      if (!profileData) {
+        const { data } = await supabase.rpc('ensure_user_onboarding_profile' as any);
+        profileData = data;
+      }
+
       if (!mounted) return;
-      setProfile(profileRes.data || null);
+      setProfile(profileData || null);
       setRoles((rolesRes.data || []) as OrgRole[]);
       setIsCreator(Boolean(creatorRes.data));
       setLoading(false);
@@ -54,9 +60,10 @@ export const usePlatformAccess = () => {
     return () => { mounted = false; };
   }, [user]);
 
-  const primaryRole = roles[0]?.role || (profile?.platform_mode === 'school' ? 'proprietor' : 'director');
+  const metadataMode = user?.user_metadata?.platform_mode;
+  const primaryRole = roles[0]?.role || ((profile?.platform_mode || metadataMode) === 'school' ? 'proprietor' : 'director');
   const organizationId = roles[0]?.organization_user_id || user?.id || '';
-  const mode: PlatformMode = (profile?.platform_mode || roles[0]?.platform_mode || 'company') as PlatformMode;
+  const mode: PlatformMode = (profile?.platform_mode || roles[0]?.platform_mode || metadataMode || 'company') as PlatformMode;
 
   const access = useMemo(() => ({
     isCompany: mode === 'company',
