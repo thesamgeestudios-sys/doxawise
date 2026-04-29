@@ -147,9 +147,8 @@ serve(async (req) => {
       const { card_id, amount } = body;
 
       const proxyAgent = new ProxyAgent(FIXIE_URL);
-      const flwRes = await undiciFetch(`https://api.flutterwave.com/v3/virtual-cards/${card_id}/fund`, {
+      const flwRes = await flutterwaveRequest(`https://api.flutterwave.com/v3/virtual-cards/${card_id}/fund`, {
         method: "POST",
-        dispatcher: proxyAgent,
         headers: {
           Authorization: `Bearer ${FLW_SECRET_KEY}`,
           "Content-Type": "application/json",
@@ -158,7 +157,9 @@ serve(async (req) => {
           debit_currency: "NGN",
           amount,
         }),
-      } as any);
+      }, proxyAgent);
+
+      if (!flwRes) return new Response(JSON.stringify({ success: false, message: "Virtual card service is temporarily unreachable. Please try again shortly." }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
       const flwData = await flwRes.json();
 
@@ -196,14 +197,15 @@ serve(async (req) => {
       const status = action === "block" ? "block" : "unblock";
 
       const proxyAgent = new ProxyAgent(FIXIE_URL);
-      const flwRes = await undiciFetch(`https://api.flutterwave.com/v3/virtual-cards/${card_id}/status/${status}`, {
+      const flwRes = await flutterwaveRequest(`https://api.flutterwave.com/v3/virtual-cards/${card_id}/status/${status}`, {
         method: "PUT",
-        dispatcher: proxyAgent,
         headers: {
           Authorization: `Bearer ${FLW_SECRET_KEY}`,
           "Content-Type": "application/json",
         },
-      } as any);
+      }, proxyAgent);
+
+      if (!flwRes) return new Response(JSON.stringify({ success: false, message: "Virtual card service is temporarily unreachable. Please try again shortly." }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
       const flwData = await flwRes.json();
 
@@ -230,14 +232,15 @@ serve(async (req) => {
       const { card_id } = body;
 
       const proxyAgent = new ProxyAgent(FIXIE_URL);
-      const flwRes = await undiciFetch(`https://api.flutterwave.com/v3/virtual-cards/${card_id}/terminate`, {
+      const flwRes = await flutterwaveRequest(`https://api.flutterwave.com/v3/virtual-cards/${card_id}/terminate`, {
         method: "PUT",
-        dispatcher: proxyAgent,
         headers: {
           Authorization: `Bearer ${FLW_SECRET_KEY}`,
           "Content-Type": "application/json",
         },
-      } as any);
+      }, proxyAgent);
+
+      if (!flwRes) return new Response(JSON.stringify({ success: false, message: "Virtual card service is temporarily unreachable. Please try again shortly." }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
       const flwData = await flwRes.json();
 
