@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { fetch as undiciFetch, ProxyAgent } from "npm:undici@6.19.8";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -13,6 +14,9 @@ serve(async (req) => {
   try {
     const FLW_SECRET_KEY = Deno.env.get("FLW_SECRET_KEY");
     if (!FLW_SECRET_KEY) throw new Error("FLW_SECRET_KEY not configured");
+    const FIXIE_URL = Deno.env.get("FIXIE_URL");
+    if (!FIXIE_URL) throw new Error("FIXIE_URL not configured");
+    const proxyAgent = new ProxyAgent(FIXIE_URL);
 
     const authHeader = req.headers.get("authorization");
     if (!authHeader) throw new Error("Missing authorization header");
@@ -38,11 +42,12 @@ serve(async (req) => {
     if (action === "get_rates") {
       const { source_currency, destination_currency, amount } = body;
       
-      const rateRes = await fetch(
+      const rateRes = await undiciFetch(
         `https://api.flutterwave.com/v3/transfers/rates?amount=${amount}&destination_currency=${destination_currency}&source_currency=${source_currency || "NGN"}`,
         {
           headers: { Authorization: `Bearer ${FLW_SECRET_KEY}` },
-        }
+          dispatcher: proxyAgent,
+        } as any
       );
       const rateData = await rateRes.json();
       
@@ -55,9 +60,9 @@ serve(async (req) => {
     // List supported banks for a country
     if (action === "get_country_banks") {
       const { country } = body;
-      const bankRes = await fetch(
+      const bankRes = await undiciFetch(
         `https://api.flutterwave.com/v3/banks/${country}`,
-        { headers: { Authorization: `Bearer ${FLW_SECRET_KEY}` } }
+        { headers: { Authorization: `Bearer ${FLW_SECRET_KEY}` }, dispatcher: proxyAgent } as any
       );
       const bankData = await bankRes.json();
       
@@ -93,9 +98,9 @@ serve(async (req) => {
       if (!profile) throw new Error("Profile not found");
 
       // For international, we first get the rate to know how much NGN to debit
-      const rateRes = await fetch(
+      const rateRes = await undiciFetch(
         `https://api.flutterwave.com/v3/transfers/rates?amount=${amount}&destination_currency=${destination_currency || currency}&source_currency=NGN`,
-        { headers: { Authorization: `Bearer ${FLW_SECRET_KEY}` } }
+        { headers: { Authorization: `Bearer ${FLW_SECRET_KEY}` }, dispatcher: proxyAgent } as any
       );
       const rateData = await rateRes.json();
 
@@ -109,7 +114,7 @@ serve(async (req) => {
 
       const reference = `DXW-INTL-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
-      const flwRes = await fetch("https://api.flutterwave.com/v3/transfers", {
+      const flwRes = await undiciFetch("https://api.flutterwave.com/v3/transfers", {
         method: "POST",
         headers: {
           Authorization: `Bearer ${FLW_SECRET_KEY}`,
@@ -126,7 +131,8 @@ serve(async (req) => {
           beneficiary_name: beneficiary_name || "",
           meta: meta || [],
         }),
-      });
+        dispatcher: proxyAgent,
+      } as any);
 
       const flwData = await flwRes.json();
 
