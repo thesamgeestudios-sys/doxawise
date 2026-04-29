@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { fetch as undiciFetch, ProxyAgent } from "npm:undici@6.19.8";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -13,6 +14,8 @@ serve(async (req) => {
   try {
     const FLW_SECRET_KEY = Deno.env.get("FLW_SECRET_KEY");
     if (!FLW_SECRET_KEY) throw new Error("FLW_SECRET_KEY not configured");
+    const FIXIE_URL = Deno.env.get("FIXIE_URL");
+    if (!FIXIE_URL) throw new Error("FIXIE_URL not configured");
 
     const authHeader = req.headers.get("authorization");
     if (!authHeader) throw new Error("Missing authorization header");
@@ -29,7 +32,7 @@ serve(async (req) => {
     const { bvn } = await req.json();
     if (!bvn || bvn.length !== 11) throw new Error("BVN must be 11 digits");
 
-    const flwRes = await fetch("https://api.flutterwave.com/v3/bvn/verifications", {
+    const flwRes = await undiciFetch("https://api.flutterwave.com/v3/bvn/verifications", {
       method: "POST",
       headers: {
         Authorization: `Bearer ${FLW_SECRET_KEY}`,
@@ -42,7 +45,8 @@ serve(async (req) => {
         first_name: user.user_metadata?.first_name || "",
         last_name: user.user_metadata?.last_name || "",
       }),
-    });
+      dispatcher: new ProxyAgent(FIXIE_URL),
+    } as any);
 
     const flwData = await flwRes.json();
 
