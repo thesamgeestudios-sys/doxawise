@@ -143,4 +143,7 @@ export const flutterwaveApi = {
     receipt_pdf_url: string;
     receipt_image_url: string;
   }) => callEdgeFunction("store-receipt", params),
+
+  getWebhookStatus: (params: { expected_hash?: string } = {}) =>
+    callEdgeFunction("webhook-status", params),
 };
