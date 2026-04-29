@@ -256,13 +256,13 @@ const Dashboard = () => {
             <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center mx-auto mb-2 group-hover:bg-primary/20 transition-colors">
               <Banknote className="w-5 h-5 text-primary" />
             </div>
-            <p className="text-sm font-medium">{mode === 'school' ? 'Salary Payroll' : 'Payroll'}</p>
+            <p className="text-sm font-medium">{dashboardMode === 'school' ? 'Salary Payroll' : 'Payroll'}</p>
           </button>}
           <button onClick={() => navigate('/dashboard/staff')} className="card-elevated p-4 text-center hover:border-[hsl(var(--info))]/40 transition-colors group">
             <div className="w-10 h-10 rounded-xl bg-[hsl(var(--info))]/10 flex items-center justify-center mx-auto mb-2 group-hover:bg-[hsl(var(--info))]/20 transition-colors">
               <Users className="w-5 h-5 text-[hsl(var(--info))]" />
             </div>
-            <p className="text-sm font-medium">{mode === 'school' ? 'Manage Staff' : 'Manage Staff'}</p>
+            <p className="text-sm font-medium">Manage Staff</p>
           </button>
           <button onClick={() => navigate('/dashboard/cards')} className="card-elevated p-4 text-center hover:border-[hsl(var(--purple))]/40 transition-colors group">
             <div className="w-10 h-10 rounded-xl bg-[hsl(var(--purple))]/10 flex items-center justify-center mx-auto mb-2 group-hover:bg-[hsl(var(--purple))]/20 transition-colors">
