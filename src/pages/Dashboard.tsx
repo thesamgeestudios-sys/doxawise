@@ -20,6 +20,7 @@ interface Profile {
   bvn: string | null;
   business_name_locked: boolean;
   account_type: string;
+  platform_mode: 'company' | 'school';
 }
 
 interface Transaction {
@@ -53,7 +54,7 @@ const Dashboard = () => {
   const loadData = async () => {
     setLoading(true);
     const [profileRes, txRes, staffRes, paymentsRes, studentsRes, feesRes] = await Promise.all([
-      supabase.from('profiles').select('*').eq('user_id', user!.id).single(),
+      supabase.from('profiles').select('*').eq('user_id', user!.id).maybeSingle(),
       supabase.from('transactions').select('*').eq('user_id', user!.id).order('created_at', { ascending: false }).limit(10),
       supabase.from('staff').select('id', { count: 'exact' }).eq('user_id', organizationId || user!.id),
       supabase.from('scheduled_payments').select('*').eq('user_id', organizationId || user!.id),
@@ -62,6 +63,10 @@ const Dashboard = () => {
     ]);
 
     if (profileRes.data) setProfile(profileRes.data as unknown as Profile);
+    else {
+      const { data } = await supabase.rpc('ensure_user_onboarding_profile' as any);
+      if (data) setProfile(data as unknown as Profile);
+    }
     if (txRes.data) setTransactions(txRes.data as Transaction[]);
     setStaffCount(staffRes.count || 0);
 
@@ -118,7 +123,8 @@ const Dashboard = () => {
     }
   };
 
-  const businessName = profile?.business_name || user?.user_metadata?.business_name || 'My Business';
+  const dashboardMode = profile?.platform_mode || mode;
+  const businessName = profile?.business_name || user?.user_metadata?.business_name || (dashboardMode === 'school' ? 'My School' : 'My Business');
   const balance = profile?.wallet_balance || 0;
 
   if (loading) {
@@ -136,7 +142,7 @@ const Dashboard = () => {
       <div className="space-y-6">
         <div className="section-reveal">
           <h1 className="text-2xl sm:text-3xl font-bold">Welcome back, {profile?.first_name || user?.user_metadata?.first_name || 'there'}!</h1>
-          <p className="text-muted-foreground mt-1">{businessName} • {roleLabel} • {mode === 'school' ? 'School Management' : 'Company / Organisation'}</p>
+          <p className="text-muted-foreground mt-1">{businessName} • {roleLabel} • {dashboardMode === 'school' ? 'School Management' : 'Company / Organisation'}</p>
         </div>
 
         {/* BVN Verification Banner */}
@@ -163,7 +169,7 @@ const Dashboard = () => {
             <div className="text-sm">
               <p className="font-medium text-foreground flex items-center gap-1.5"><Lock className="w-3.5 h-3.5" /> Important: Business Name Lock</p>
               <p className="text-muted-foreground mt-1">
-                Once you create a virtual account, your <strong>business/company name cannot be changed</strong>. This name will appear on all transfers and your virtual account. Make sure your business name is correct before proceeding.
+                Once you create a virtual account, your <strong>{dashboardMode === 'school' ? 'school name' : 'business/company name'} cannot be changed</strong>. This name will appear on all transfers and your virtual account. Make sure it is correct before proceeding.
               </p>
             </div>
           </div>
@@ -234,13 +240,13 @@ const Dashboard = () => {
           </div>
           <div className="stat-card section-reveal stagger-3 border-l-4 border-l-[hsl(var(--warning))]">
             <CreditCard className="w-5 h-5 text-[hsl(var(--warning))] mb-3" />
-            <p className="text-2xl font-bold">{mode === 'school' ? schoolStats.students : pendingPayments}</p>
-            <p className="text-sm text-muted-foreground mt-1">{mode === 'school' ? 'Total Students' : 'Pending Payments'}</p>
+            <p className="text-2xl font-bold">{dashboardMode === 'school' ? schoolStats.students : pendingPayments}</p>
+            <p className="text-sm text-muted-foreground mt-1">{dashboardMode === 'school' ? 'Total Students' : 'Pending Payments'}</p>
           </div>
           <div className="stat-card section-reveal stagger-4 border-l-4 border-l-[hsl(var(--success))]">
             <TrendingUp className="w-5 h-5 text-[hsl(var(--success))] mb-3" />
-            <p className="text-2xl font-bold">{formatNaira(mode === 'school' ? schoolStats.feesCollected : totalDisbursed)}</p>
-            <p className="text-sm text-muted-foreground mt-1">{mode === 'school' ? 'Fees Collected' : 'Total Salary Paid'}</p>
+            <p className="text-2xl font-bold">{formatNaira(dashboardMode === 'school' ? schoolStats.feesCollected : totalDisbursed)}</p>
+            <p className="text-sm text-muted-foreground mt-1">{dashboardMode === 'school' ? 'Fees Collected' : 'Total Salary Paid'}</p>
           </div>
         </div>
 
