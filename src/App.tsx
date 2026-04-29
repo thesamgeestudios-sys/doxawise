@@ -48,6 +48,7 @@ const App = () => (
             <Route path="/dashboard/transactions" element={<Transactions />} />
             <Route path="/dashboard/settings" element={<UserSettings />} />
             <Route path="/dashboard/webhook-status" element={<WebhookStatus />} />
+            <Route path="/dashboard/*" element={<Dashboard />} />
             <Route path="/admin" element={<Admin />} />
             <Route path="/terms" element={<Terms />} />
             <Route path="*" element={<NotFound />} />
