@@ -32,21 +32,64 @@ serve(async (req) => {
     const { account_number, account_bank } = await req.json();
     if (!account_number || !account_bank) throw new Error("Account number and bank code are required");
 
-    const proxyAgent = new ProxyAgent(FIXIE_URL);
-    const res = await undiciFetch(
-      `https://api.flutterwave.com/v3/accounts/resolve`,
-      {
-        method: "POST",
-        dispatcher: proxyAgent,
-        headers: {
-          Authorization: `Bearer ${FLW_SECRET_KEY}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ account_number, account_bank }),
-      } as any
-    );
+    let res: Response;
+    try {
+      const proxyAgent = new ProxyAgent(FIXIE_URL);
+      res = await undiciFetch(
+        `https://api.flutterwave.com/v3/accounts/resolve`,
+        {
+          method: "POST",
+          dispatcher: proxyAgent,
+          headers: {
+            Authorization: `Bearer ${FLW_SECRET_KEY}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ account_number, account_bank }),
+        } as any
+      );
+    } catch (fetchError) {
+      console.error("Flutterwave account resolve fetch failed", fetchError);
+      return new Response(
+        JSON.stringify({
+          success: false,
+          fallback: true,
+          error: "ACCOUNT_RESOLUTION_TEMPORARILY_UNAVAILABLE",
+          message: "Account name lookup is temporarily unavailable. Please confirm the account details and try again shortly.",
+        }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
 
-    const data = await res.json();
+    const responseText = await res.text();
+    let data: any = {};
+    try {
+      data = responseText ? JSON.parse(responseText) : {};
+    } catch {
+      console.error("Flutterwave account resolve returned non-JSON response", res.status, responseText.slice(0, 500));
+      return new Response(
+        JSON.stringify({
+          success: false,
+          fallback: true,
+          error: "ACCOUNT_RESOLUTION_BAD_RESPONSE",
+          message: "Account name lookup is temporarily unavailable. Please try again shortly.",
+        }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    if (!res.ok) {
+      console.error("Flutterwave account resolve HTTP error", res.status, data);
+      const fallbackable = res.status >= 500 || res.status === 408 || res.status === 429;
+      return new Response(
+        JSON.stringify({
+          success: false,
+          fallback: fallbackable,
+          message: data.message || "Could not resolve account",
+          raw: data,
+        }),
+        { status: fallbackable ? 200 : 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
 
     if (data.status === "success") {
       return new Response(
@@ -56,7 +99,7 @@ serve(async (req) => {
     }
 
     return new Response(
-      JSON.stringify({ success: false, message: data.message || "Could not resolve account" }),
+      JSON.stringify({ success: false, message: data.message || "Could not resolve account", raw: data }),
       { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error) {
