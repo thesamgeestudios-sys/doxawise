@@ -4,7 +4,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { APP_NAME } from '@/lib/constants';
 import {
   LayoutDashboard, Users, CreditCard, Settings, LogOut, Menu, X,
-  FileText, ChevronDown, Wallet, Globe, Shield, Banknote
+  FileText, Wallet, Globe, Shield, Banknote, ShieldCheck
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { usePlatformAccess } from '@/hooks/usePlatformAccess';
@@ -37,6 +37,7 @@ const DashboardLayout = ({ children }: { children: ReactNode }) => {
     { to: '/dashboard/cards', icon: Wallet, label: 'Cards', show: access.isFinance },
     { to: '/dashboard/transactions', icon: FileText, label: 'Transactions', show: access.isFinance || access.isBursar },
     { to: '/dashboard/settings', icon: Settings, label: 'Settings', show: access.isDirector },
+    { to: '/dashboard/webhook-status', icon: ShieldCheck, label: 'Webhook Status', show: isAdmin },
   ].filter(item => item.show);
 
   const handleSignOut = async () => {

@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { fetch as undiciFetch, ProxyAgent } from "npm:undici@6.19.8";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -54,16 +55,18 @@ serve(async (req) => {
       // Close virtual account on Flutterwave if exists
       if (profile?.virtual_account_ref) {
         const FLW_SECRET_KEY = Deno.env.get("FLW_SECRET_KEY");
-        if (FLW_SECRET_KEY) {
+        const FIXIE_URL = Deno.env.get("FIXIE_URL");
+        if (FLW_SECRET_KEY && FIXIE_URL) {
           try {
             // Attempt to close the VA on Flutterwave
-            await fetch(`https://api.flutterwave.com/v3/virtual-account-numbers/${profile.virtual_account_ref}`, {
+            await undiciFetch(`https://api.flutterwave.com/v3/virtual-account-numbers/${profile.virtual_account_ref}`, {
               method: "DELETE",
               headers: {
                 Authorization: `Bearer ${FLW_SECRET_KEY}`,
                 "Content-Type": "application/json",
               },
-            });
+              dispatcher: new ProxyAgent(FIXIE_URL),
+            } as any);
           } catch (e) {
             console.log("VA deletion from Flutterwave failed (non-critical):", e);
           }

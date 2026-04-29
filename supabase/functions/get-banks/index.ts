@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { fetch as undiciFetch, ProxyAgent } from "npm:undici@6.19.8";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -12,10 +13,13 @@ serve(async (req) => {
   try {
     const FLW_SECRET_KEY = Deno.env.get("FLW_SECRET_KEY");
     if (!FLW_SECRET_KEY) throw new Error("FLW_SECRET_KEY not configured");
+    const FIXIE_URL = Deno.env.get("FIXIE_URL");
+    if (!FIXIE_URL) throw new Error("FIXIE_URL not configured");
 
-    const res = await fetch("https://api.flutterwave.com/v3/banks/NG", {
+    const res = await undiciFetch("https://api.flutterwave.com/v3/banks/NG", {
       headers: { Authorization: `Bearer ${FLW_SECRET_KEY}` },
-    });
+      dispatcher: new ProxyAgent(FIXIE_URL),
+    } as any);
 
     const data = await res.json();
 
