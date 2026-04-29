@@ -20,6 +20,7 @@ import Terms from "./pages/Terms";
 import EmailConfirmed from "./pages/EmailConfirmed";
 import RegistrationSuccess from "./pages/RegistrationSuccess";
 import SchoolManagement from "./pages/SchoolManagement";
+import WebhookStatus from "./pages/WebhookStatus";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -46,6 +47,7 @@ const App = () => (
             <Route path="/dashboard/cards" element={<Cards />} />
             <Route path="/dashboard/transactions" element={<Transactions />} />
             <Route path="/dashboard/settings" element={<UserSettings />} />
+            <Route path="/dashboard/webhook-status" element={<WebhookStatus />} />
             <Route path="/admin" element={<Admin />} />
             <Route path="/terms" element={<Terms />} />
             <Route path="*" element={<NotFound />} />
