@@ -8,6 +8,15 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+async function flutterwaveRequest(url: string, init: RequestInit, proxyAgent: ProxyAgent) {
+  try {
+    return await undiciFetch(url, { ...init, dispatcher: proxyAgent } as any);
+  } catch (error) {
+    console.error("Flutterwave virtual card request failed", error);
+    return null;
+  }
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -50,9 +59,8 @@ serve(async (req) => {
 
       // Create virtual card via Flutterwave
       const proxyAgent = new ProxyAgent(FIXIE_URL);
-      const flwRes = await undiciFetch("https://api.flutterwave.com/v3/virtual-cards", {
+      const flwRes = await flutterwaveRequest("https://api.flutterwave.com/v3/virtual-cards", {
         method: "POST",
-        dispatcher: proxyAgent,
         headers: {
           Authorization: `Bearer ${FLW_SECRET_KEY}`,
           "Content-Type": "application/json",
@@ -75,7 +83,14 @@ serve(async (req) => {
           gender: "M",
           callback_url: `${Deno.env.get("SUPABASE_URL")}/functions/v1/create-virtual-card`,
         }),
-      } as any);
+      }, proxyAgent);
+
+      if (!flwRes) {
+        return new Response(
+          JSON.stringify({ success: false, message: "Virtual card service is temporarily unreachable through the configured static IP. Please try again shortly." }),
+          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
 
       const flwData = await flwRes.json();
       console.log("Flutterwave virtual card response:", JSON.stringify(flwData));
