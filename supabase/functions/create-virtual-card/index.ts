@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { fetch as undiciFetch, ProxyAgent } from "npm:undici@6.19.8";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -12,7 +13,9 @@ serve(async (req) => {
 
   try {
     const FLW_SECRET_KEY = Deno.env.get("FLW_SECRET_KEY");
+    const FIXIE_URL = Deno.env.get("FIXIE_URL");
     if (!FLW_SECRET_KEY) throw new Error("FLW_SECRET_KEY not configured");
+    if (!FIXIE_URL) throw new Error("FIXIE_URL not configured");
 
     const authHeader = req.headers.get("authorization");
     if (!authHeader) throw new Error("Missing authorization header");
@@ -46,8 +49,10 @@ serve(async (req) => {
       const fundingAmount = amount || 0;
 
       // Create virtual card via Flutterwave
-      const flwRes = await fetch("https://api.flutterwave.com/v3/virtual-cards", {
+      const proxyAgent = new ProxyAgent(FIXIE_URL);
+      const flwRes = await undiciFetch("https://api.flutterwave.com/v3/virtual-cards", {
         method: "POST",
+        dispatcher: proxyAgent,
         headers: {
           Authorization: `Bearer ${FLW_SECRET_KEY}`,
           "Content-Type": "application/json",
@@ -70,7 +75,7 @@ serve(async (req) => {
           gender: "M",
           callback_url: `${Deno.env.get("SUPABASE_URL")}/functions/v1/create-virtual-card`,
         }),
-      });
+      } as any);
 
       const flwData = await flwRes.json();
       console.log("Flutterwave virtual card response:", JSON.stringify(flwData));
