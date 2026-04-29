@@ -119,7 +119,7 @@ serve(async (req) => {
         );
       } else {
         const errorMsg = flwData.message?.includes("contact your account administrator")
-          ? "Virtual card creation is not enabled on this account. Please ensure IP whitelisting is configured and virtual cards are activated on your Flutterwave dashboard."
+          ? "Virtual card creation is not enabled for this payment account yet. Please ask Flutterwave to enable Virtual Cards and whitelist outbound IP 34.62.105.141."
           : flwData.message || "Failed to create virtual card";
         return new Response(
           JSON.stringify({ success: false, message: errorMsg, raw: flwData }),
