@@ -45,7 +45,7 @@ const SendMoney = () => {
       if (result.success && result.data?.account_name) {
         setResolvedName(result.data.account_name);
         setForm(p => ({ ...p, recipientName: result.data.account_name }));
-      } else setResolveError(result.message || 'Could not resolve account');
+      } else setResolveError(result.fallback ? 'Account lookup is temporarily unavailable. Please try again shortly.' : result.message || 'Could not resolve account');
     } catch (err) { setResolveError(err instanceof Error ? err.message : 'Could not resolve account'); }
     setResolvingAccount(false);
   }, []);
