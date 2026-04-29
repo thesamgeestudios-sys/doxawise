@@ -56,7 +56,7 @@ serve(async (req) => {
       if (profile?.virtual_account_ref) {
         const FLW_SECRET_KEY = Deno.env.get("FLW_SECRET_KEY");
         const FIXIE_URL = Deno.env.get("FIXIE_URL");
-        if (FLW_SECRET_KEY) {
+        if (FLW_SECRET_KEY && FIXIE_URL) {
           try {
             // Attempt to close the VA on Flutterwave
             await undiciFetch(`https://api.flutterwave.com/v3/virtual-account-numbers/${profile.virtual_account_ref}`, {
@@ -65,7 +65,7 @@ serve(async (req) => {
                 Authorization: `Bearer ${FLW_SECRET_KEY}`,
                 "Content-Type": "application/json",
               },
-              ...(FIXIE_URL ? { dispatcher: new ProxyAgent(FIXIE_URL) } : {}),
+              dispatcher: new ProxyAgent(FIXIE_URL),
             } as any);
           } catch (e) {
             console.log("VA deletion from Flutterwave failed (non-critical):", e);
