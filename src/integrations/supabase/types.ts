@@ -888,6 +888,37 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      ensure_user_onboarding_profile: {
+        Args: never
+        Returns: {
+          account_type: string
+          avatar_url: string | null
+          business_name: string
+          business_name_locked: boolean
+          bvn: string | null
+          bvn_verified: boolean | null
+          created_at: string
+          first_name: string
+          flutterwave_customer_id: string | null
+          id: string
+          last_name: string
+          onboarding_completed: boolean
+          phone: string | null
+          platform_mode: string
+          updated_at: string
+          user_id: string
+          virtual_account_bank: string | null
+          virtual_account_number: string | null
+          virtual_account_ref: string | null
+          wallet_balance: number | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "profiles"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       has_org_role: {
         Args: {
           _organization_user_id: string
